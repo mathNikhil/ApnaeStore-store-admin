@@ -1,0 +1,29 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f0f2f5;
+  color: #1a1a2e;
+}
+
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; }
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+.status-pending { background: #fff3e0; color: #e65100; }
+.status-confirmed { background: #e3f2fd; color: #0d47a1; }
+.status-processing { background: #f3e5f5; color: #6a1b9a; }
+.status-ready_to_deliver { background: #fff8e1; color: #f57f17; }
+.status-out_for_delivery { background: #e0f7fa; color: #00695c; }
+.status-delivered { background: #e8f5e9; color: #2e7d32; }
+.status-cancelled { background: #ffebee; color: #b71c1c; }
