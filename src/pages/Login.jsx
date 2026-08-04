@@ -1,62 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { storeAdminAuthAPI } from '../services/api';
 
+// ✅ Password-only login — no OTP. The store itself is the identity
+// (resolved from ?store=<subdomain> in the URL, same as the Storefront),
+// so there's no separate username either: one password per store, shown
+// on the tenant's dashboard, shared with whoever needs to manage it.
 const Login = () => {
-    const [email, setEmail] = useState('admin@yourstore.com');
-    const [password, setPassword] = useState('Admin@123');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [subdomain, setSubdomain] = useState(null);
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        setSubdomain(params.get('store'));
+    }, []);
 
-        // Simple demo login - accepts any credentials for now
-        // TODO: Connect to real API
-        if (email && password) {
-            localStorage.setItem('storeAdminToken', 'demo-token-' + Date.now());
-            localStorage.setItem('storeAdminUser', JSON.stringify({
-                name: 'Store Admin',
-                email: email,
-                role: 'admin'
-            }));
-            setLoading(false);
-            navigate('/dashboard');
-        } else {
-            setError('Please enter email and password');
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!password) {
+            setError('Please enter the store admin password');
+            return;
+        }
+        setLoading(true);
+        try {
+            const result = await storeAdminAuthAPI.login(subdomain, password);
+            if (result.success) {
+                localStorage.setItem('storeAdminToken', result.data.token);
+                localStorage.setItem('currentStoreId', result.data.storeId);
+                localStorage.setItem('currentStoreName', result.data.storeName || '');
+                localStorage.setItem('currentStoreSubdomain', subdomain);
+                navigate('/dashboard');
+            } else {
+                setError(result.error || result.message || 'Login failed');
+            }
+        } catch (err) {
+            setError(err.message || 'Login failed');
+        } finally {
             setLoading(false);
         }
     };
+
+    if (!subdomain) {
+        return (
+            <div style={styles.container}>
+                <div style={styles.card}>
+                    <div style={styles.logo}>⚠️</div>
+                    <h1 style={styles.title}>Store Admin</h1>
+                    <div style={styles.error}>
+                        This link is missing a store reference. Please use the admin link for your specific store
+                        (e.g. yourstore.com/admin), not a generic Store Admin URL.
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={styles.container}>
             <div style={styles.card}>
                 <div style={styles.logo}>📊</div>
                 <h1 style={styles.title}>Store Admin</h1>
-                <p style={styles.subtitle}>Manage your store orders & customers</p>
+                <p style={styles.subtitle}>Managing: <strong>{subdomain}</strong></p>
                 {error && <div style={styles.error}>{error}</div>}
-                <form onSubmit={handleSubmit}>
-                    <div style={styles.inputGroup}>
-                        <label style={styles.label}>Email</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@yourstore.com"
-                            required
-                            style={styles.input}
-                        />
-                    </div>
+
+                <form onSubmit={handleLogin}>
                     <div style={styles.inputGroup}>
                         <label style={styles.label}>Password</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter password"
+                            placeholder="Enter store admin password"
                             required
+                            autoFocus
                             style={styles.input}
                         />
                     </div>
@@ -64,8 +84,9 @@ const Login = () => {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
+
                 <div style={styles.footer}>
-                    <small>Demo: Use any email/password</small>
+                    <small>Ask the store owner for this store's admin password if you don't have it.</small>
                 </div>
             </div>
         </div>
@@ -99,6 +120,7 @@ const styles = {
         border: '1px solid #ddd',
         borderRadius: '8px',
         fontSize: '14px',
+        boxSizing: 'border-box',
     },
     button: {
         width: '100%',

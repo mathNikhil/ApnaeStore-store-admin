@@ -10,11 +10,19 @@ const OrderDetail = () => {
     const [loading, setLoading] = useState(true);
     const [selectedStatus, setSelectedStatus] = useState('');
     const [storeId, setStoreId] = useState(null);
+    const [tracking, setTracking] = useState(null);
+    const [showCourierForm, setShowCourierForm] = useState(false);
+    const [courierName, setCourierName] = useState('');
+    const [trackingNumber, setTrackingNumber] = useState('');
+    const [courierNotes, setCourierNotes] = useState('');
+    const [savingTracking, setSavingTracking] = useState(false);
+    const [refreshingTracking, setRefreshingTracking] = useState(false);
+    const [myCouriers, setMyCouriers] = useState([]);
 
     useEffect(() => {
         const token = localStorage.getItem('storeAdminToken');
         if (!token) {
-            navigate('/login');
+            navigate(`/login${window.location.search}`);
             return;
         }
         const storedStoreId = localStorage.getItem('currentStoreId');
@@ -33,6 +41,14 @@ const OrderDetail = () => {
                 setOrder(result.data);
                 setSelectedStatus(result.data.status);
             }
+            const trackingResult = await storeAdminAPI.getTracking(sid, id);
+            if (trackingResult.success && trackingResult.data && trackingResult.data.tracking_number) {
+                setTracking(trackingResult.data);
+            }
+            const couriersResult = await storeAdminAPI.getCouriers(sid);
+            if (couriersResult.success) {
+                setMyCouriers(couriersResult.data);
+            }
         } catch (error) {
             console.error('Error fetching order:', error);
         } finally {
@@ -45,9 +61,17 @@ const OrderDetail = () => {
             alert('Please select a different status');
             return;
         }
-        
+
+        // ✅ Out for Delivery needs courier + tracking details — instead of
+        // a plain status change, this opens the courier form, which saves
+        // both the tracking info AND the status together.
+        if (selectedStatus === 'out_for_delivery') {
+            setShowCourierForm(true);
+            return;
+        }
+
         if (!window.confirm(`Change order status to ${selectedStatus.replace('_', ' ').toUpperCase()}?`)) return;
-        
+
         try {
             const result = await storeAdminAPI.updateOrderStatus(storeId, order.id, selectedStatus);
             if (result.success) {
@@ -59,6 +83,52 @@ const OrderDetail = () => {
         } catch (error) {
             console.error('Error updating status:', error);
             alert('❌ Error updating order status');
+        }
+    };
+
+    const handleSaveCourierInfo = async () => {
+        if (!courierName.trim() || !trackingNumber.trim()) {
+            alert('Please enter both courier name and tracking number');
+            return;
+        }
+        setSavingTracking(true);
+        try {
+            const result = await storeAdminAPI.addTracking(storeId, order.id, courierName.trim(), trackingNumber.trim(), courierNotes.trim());
+            if (result.success) {
+                alert('✅ Order marked Out for Delivery with tracking details');
+                setShowCourierForm(false);
+                setCourierName('');
+                setTrackingNumber('');
+                setCourierNotes('');
+                fetchOrderDetail(storeId);
+            } else {
+                alert(result.error || '❌ Failed to save tracking details');
+            }
+        } catch (error) {
+            console.error('Error saving tracking:', error);
+            alert('❌ Error saving tracking details');
+        } finally {
+            setSavingTracking(false);
+        }
+    };
+
+    const handleRefreshTracking = async () => {
+        setRefreshingTracking(true);
+        try {
+            const result = await storeAdminAPI.refreshTracking(storeId, order.id);
+            if (result.success) {
+                setTracking(result.data);
+                if (result.data.last_status === 'delivered') {
+                    fetchOrderDetail(storeId);
+                }
+            } else {
+                alert(result.error || 'Failed to refresh tracking');
+            }
+        } catch (error) {
+            console.error('Error refreshing tracking:', error);
+            alert('Failed to refresh tracking');
+        } finally {
+            setRefreshingTracking(false);
         }
     };
 
@@ -144,6 +214,96 @@ const OrderDetail = () => {
                         </span>
                     </div>
                 </div>
+
+                {showCourierForm && (
+                    <div style={{...styles.statusUpdateCard, border: '2px solid #2ecc71'}}>
+                        <h3 style={styles.cardTitle}>🚚 Courier &amp; Tracking Details</h3>
+                        <p style={{fontSize: '13px', color: '#666', marginBottom: '12px'}}>
+                            Enter the courier and tracking number to mark this order Out for Delivery. We'll automatically check delivery status from the courier's site going forward.
+                        </p>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '400px'}}>
+                            {myCouriers.length > 0 ? (
+                                <>
+                                    <select
+                                        value={courierName}
+                                        onChange={(e) => setCourierName(e.target.value)}
+                                        style={styles.statusSelect}
+                                    >
+                                        <option value="">Select a courier...</option>
+                                        {myCouriers.map((c) => (
+                                            <option key={c.id} value={c.courier_name}>{c.courier_name}</option>
+                                        ))}
+                                    </select>
+                                    <a href="/couriers" target="_blank" rel="noreferrer" style={{fontSize: '12px', color: '#667eea'}}>
+                                        + Manage my couriers
+                                    </a>
+                                </>
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        placeholder="Courier name (e.g. Delhivery, Blue Dart)"
+                                        value={courierName}
+                                        onChange={(e) => setCourierName(e.target.value)}
+                                        style={styles.statusSelect}
+                                    />
+                                    <a href="/couriers" target="_blank" rel="noreferrer" style={{fontSize: '12px', color: '#667eea'}}>
+                                        Set up your courier list for next time →
+                                    </a>
+                                </>
+                            )}
+                            <input
+                                type="text"
+                                placeholder="Tracking number"
+                                value={trackingNumber}
+                                onChange={(e) => setTrackingNumber(e.target.value)}
+                                style={styles.statusSelect}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Notes (optional)"
+                                value={courierNotes}
+                                onChange={(e) => setCourierNotes(e.target.value)}
+                                style={styles.statusSelect}
+                            />
+                            <div style={{display: 'flex', gap: '10px'}}>
+                                <button style={styles.updateBtn} onClick={handleSaveCourierInfo} disabled={savingTracking}>
+                                    {savingTracking ? 'Saving...' : 'Save & Mark Out for Delivery'}
+                                </button>
+                                <button
+                                    style={{...styles.updateBtn, background: '#f0f2f5', color: '#666'}}
+                                    onClick={() => { setShowCourierForm(false); setSelectedStatus(order.status); }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {tracking && (
+                    <div style={styles.card}>
+                        <h3 style={styles.cardTitle}>🚚 Delivery Tracking</h3>
+                        <div style={styles.infoRow}><strong>Courier:</strong> {tracking.courier_name}</div>
+                        <div style={styles.infoRow}><strong>Tracking #:</strong> {tracking.tracking_number}</div>
+                        <div style={styles.infoRow}><strong>Status:</strong> {tracking.last_status_message || tracking.last_status || 'Pending'}</div>
+                        {tracking.last_checked && (
+                            <div style={styles.infoRow}>
+                                <strong>Last checked:</strong> {new Date(tracking.last_checked).toLocaleString()}
+                            </div>
+                        )}
+                        <button
+                            style={{...styles.updateBtn, marginTop: '10px'}}
+                            onClick={handleRefreshTracking}
+                            disabled={refreshingTracking}
+                        >
+                            {refreshingTracking ? 'Checking...' : '🔄 Refresh Tracking Now'}
+                        </button>
+                        <p style={{fontSize: '12px', color: '#8e9eab', marginTop: '8px'}}>
+                            Also checks automatically every 60 minutes.
+                        </p>
+                    </div>
+                )}
 
                 <div style={styles.grid}>
                     <div style={styles.card}>

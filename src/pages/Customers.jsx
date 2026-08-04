@@ -14,7 +14,7 @@ const Customers = () => {
     useEffect(() => {
         const token = localStorage.getItem('storeAdminToken');
         if (!token) {
-            navigate('/login');
+            navigate(`/login${window.location.search}`);
             return;
         }
         const storedStoreId = localStorage.getItem('currentStoreId');

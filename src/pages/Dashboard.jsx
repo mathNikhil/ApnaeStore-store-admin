@@ -19,19 +19,17 @@ const Dashboard = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('storeAdminToken');
-        if (!token) {
-            navigate('/login');
+        // ✅ A session reaching this page is always already locked to one
+        // store — resolved and ownership-verified at login (see Login.jsx).
+        // There's nothing to "select" here anymore; if either piece is
+        // missing, this isn't a valid session, back to login.
+        const storedStoreId = localStorage.getItem('currentStoreId');
+        if (!token || !storedStoreId) {
+            navigate(`/login${window.location.search}`);
             return;
         }
-        // Get storeId from localStorage or URL
-        const storedStoreId = localStorage.getItem('currentStoreId');
-        if (storedStoreId) {
-            setStoreId(storedStoreId);
-            fetchDashboardData(storedStoreId);
-        } else {
-            // TODO: If no store selected, show store selection
-            setLoading(false);
-        }
+        setStoreId(storedStoreId);
+        fetchDashboardData(storedStoreId);
     }, []);
 
     const fetchDashboardData = async (sid) => {
@@ -73,16 +71,7 @@ const Dashboard = () => {
     }
 
     if (!storeId) {
-        return (
-            <div style={styles.container}>
-                <Sidebar />
-                <div style={styles.main}>
-                    <h1>Select a Store</h1>
-                    <p style={{color:'#8e9eab'}}>Please select a store to manage</p>
-                    {/* TODO: Show store selection */}
-                </div>
-            </div>
-        );
+        return null; // redirecting to login
     }
 
     return (
