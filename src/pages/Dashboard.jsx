@@ -12,6 +12,7 @@ const Dashboard = () => {
         delivered: 0,
         total_revenue: 0,
     });
+    const [pendingReturns, setPendingReturns] = useState(0);
     const [recentOrders, setRecentOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [storeId, setStoreId] = useState(null);
@@ -44,6 +45,12 @@ const Dashboard = () => {
             const ordersResult = await storeAdminAPI.getOrders(sid, { limit: 5 });
             if (ordersResult.success) {
                 setRecentOrders(ordersResult.data);
+            }
+
+            // ✅ Return requests needing operator attention
+            const returnStatsResult = await storeAdminAPI.getReturnStats(sid);
+            if (returnStatsResult.success) {
+                setPendingReturns(returnStatsResult.data.pending);
             }
         } catch (error) {
             console.error('Error fetching dashboard:', error);
@@ -85,6 +92,17 @@ const Dashboard = () => {
                     </div>
                     <div style={styles.headerRight}>
                         <span style={styles.dateRange}>📅 Last 30 days</span>
+                    </div>
+                </div>
+
+                {/* ✅ Return requests — always visible like the other stat
+                    cards, not hidden when zero, so it's consistently where
+                    an operator expects to find it. */}
+                <div style={{ ...styles.statCard, ...styles.returnCard }} onClick={() => navigate('/returns')}>
+                    <div style={{ ...styles.iconBox, background: 'rgba(255,152,0,0.15)' }}>↩️</div>
+                    <div>
+                        <div style={styles.statValue}>{pendingReturns}</div>
+                        <div style={styles.statLabel}>Returns Awaiting Review</div>
                     </div>
                 </div>
 
@@ -195,6 +213,7 @@ const styles = {
     headerRight: { display: 'flex', gap: '12px', alignItems: 'center' },
     dateRange: { padding: '8px 16px', background: 'white', borderRadius: '8px', fontSize: '14px', color: '#666' },
     statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' },
+    returnCard: { border: '2px solid #ffb74d', marginBottom: '20px', maxWidth: '340px' },
     statCard: { background: 'white', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', cursor: 'pointer', transition: 'transform 0.2s' },
     iconBox: { width: '56px', height: '56px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' },
     statValue: { fontSize: '28px', fontWeight: 'bold', color: '#1a1a2e' },

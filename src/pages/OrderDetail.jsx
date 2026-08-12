@@ -317,8 +317,29 @@ const OrderDetail = () => {
                         <h3 style={styles.cardTitle}>📋 Order Details</h3>
                         <div style={styles.infoRow}><strong>Date:</strong> {new Date(order.created_at).toLocaleString()}</div>
                         <div style={styles.infoRow}><strong>Total:</strong> ₹{Number(order.total_amount).toLocaleString()}</div>
+                        <div style={styles.infoRow}><strong>Payment Method:</strong> {order.payment_method === 'upi' ? 'UPI' : (order.payment_method || '—')}</div>
                         <div style={styles.infoRow}><strong>Payment:</strong> {order.payment_status || 'Pending'}</div>
                         <div style={styles.infoRow}><strong>Items:</strong> {order.items ? (Array.isArray(order.items) ? order.items.length : 1) : 1}</div>
+
+                        {/* ✅ Only relevant on the COD+UPI tier (no real gateway
+                            yet) — gives the operator the customer's own UPI ID
+                            to manually cross-check against their own bank/UPI
+                            app for a matching payment before moving the order
+                            from pending to confirmed via the status dropdown
+                            above. */}
+                        {order.payment_method === 'upi' && order.customer_upi_id && (
+                            <div style={styles.upiCheckBox}>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#8a4a00', marginBottom: '4px' }}>
+                                    ⚠️ Verify Before Confirming
+                                </div>
+                                <div style={{ fontSize: '14px' }}>
+                                    Customer's UPI ID: <strong>{order.customer_upi_id}</strong>
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#8a4a00', marginTop: '4px' }}>
+                                    Check your UPI app / bank statement for ₹{Number(order.total_amount).toLocaleString()} from this ID before confirming.
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -390,6 +411,7 @@ const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
     main: { flex: 1, padding: '30px', marginLeft: '260px' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
+    upiCheckBox: { marginTop: '12px', padding: '10px 12px', background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: '8px' },
     backBtn: { color: '#667eea', cursor: 'pointer', fontWeight: '600', fontSize: '14px', border: 'none', background: 'none' },
     
     statusUpdateCard: { 

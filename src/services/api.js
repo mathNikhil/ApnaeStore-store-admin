@@ -64,6 +64,20 @@ export const storeAdminAPI = {
     getOrderStats: (storeId) => 
         apiRequest(`/api/store/${storeId}/admin/orders/stats`),
 
+    // Returns
+    getReturns: (storeId) =>
+        apiRequest(`/api/store/${storeId}/admin/returns`),
+    getReturnStats: (storeId) =>
+        apiRequest(`/api/store/${storeId}/admin/returns/stats`),
+    getReturnById: (storeId, returnId) =>
+        apiRequest(`/api/store/${storeId}/admin/returns/${returnId}`),
+    approveReturn: (storeId, returnId, data) =>
+        apiRequest(`/api/store/${storeId}/admin/returns/${returnId}/approve`, 'PUT', data),
+    rejectReturn: (storeId, returnId, rejectReason) =>
+        apiRequest(`/api/store/${storeId}/admin/returns/${returnId}/reject`, 'PUT', { rejectReason }),
+    updateReturnStatus: (storeId, returnId, status) =>
+        apiRequest(`/api/store/${storeId}/admin/returns/${returnId}/status`, 'PUT', { status }),
+
     // Courier tracking
     addTracking: (storeId, orderId, courierName, trackingNumber, courierNotes) =>
         apiRequest(`/api/store/${storeId}/admin/orders/${orderId}/tracking`, 'POST', { courierName, trackingNumber, courierNotes }),

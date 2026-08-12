@@ -8,6 +8,8 @@ import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Staff from './pages/Staff';
 import Couriers from './pages/Couriers';
+import Returns from './pages/Returns';
+import ReturnDetail from './pages/ReturnDetail';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -71,6 +73,8 @@ const App = () => {
                 <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/staff" element={isAuthenticated ? <Staff /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/couriers" element={isAuthenticated ? <Couriers /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/returns" element={isAuthenticated ? <Returns /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/returns/:id" element={isAuthenticated ? <ReturnDetail /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
         </BrowserRouter>
