@@ -51,17 +51,21 @@ const Customers = () => {
     };
 
     const exportCSV = () => {
-        const headers = ['Name', 'Email', 'Phone', 'Orders', 'Total Spent', 'Joined'];
+        const headers = ['Name', 'Phone', 'Email', 'Address', 'City', 'State', 'Pincode', 'Orders', 'Total Spent', 'Joined'];
         const rows = filteredCustomers.map(c => [
-            c.name, c.email, c.phone, c.total_orders || 0, `₹${c.total_spent || 0}`, new Date(c.created_at).toLocaleDateString()
+            c.name || '', c.phone || '', c.email || '',
+            c.address_line1 || '', c.city || '', c.state || '', c.pincode || '',
+            c.total_orders || 0, c.total_spent || 0,
+            new Date(c.created_at).toLocaleDateString()
         ]);
-        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'customers.csv';
+        a.download = 'customers_' + new Date().toISOString().split('T')[0] + '.csv';
         a.click();
+        URL.revokeObjectURL(url);
     };
 
     if (loading) {
@@ -115,24 +119,26 @@ const Customers = () => {
                 <div style={styles.tableContainer}>
                     <table style={styles.table}>
                         <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Orders</th>
-                                <th>Total Spent</th>
-                                <th>Joined</th>
+                            <tr style={{background:'#f8f9fa'}}>
+                                <th style={styles.th}>Name</th>
+                                <th style={styles.th}>Phone</th>
+                                <th style={styles.th}>Email</th>
+                                <th style={styles.th}>Address</th>
+                                <th style={styles.th}>Orders</th>
+                                <th style={styles.th}>Total Spent</th>
+                                <th style={styles.th}>Joined</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredCustomers.map(customer => (
-                                <tr key={customer.id}>
-                                    <td><strong>{customer.name}</strong></td>
-                                    <td>{customer.email}</td>
-                                    <td>{customer.phone}</td>
-                                    <td>{customer.total_orders || 0}</td>
-                                    <td>₹{Number(customer.total_spent || 0).toLocaleString()}</td>
-                                    <td>{new Date(customer.created_at).toLocaleDateString()}</td>
+                                <tr key={customer.id} style={styles.tr}>
+                                    <td style={styles.td}><strong>{customer.name || '—'}</strong></td>
+                                    <td style={styles.td}>{customer.phone || '—'}</td>
+                                    <td style={styles.td}>{customer.email || '—'}</td>
+                                    <td style={styles.td}>{customer.address_line1 ? `${customer.address_line1}${customer.city ? ', ' + customer.city : ''}${customer.state ? ', ' + customer.state : ''} - ${customer.pincode || ''}` : '—'}</td>
+                                    <td style={{...styles.td, textAlign:'center'}}>{customer.total_orders || 0}</td>
+                                    <td style={{...styles.td, textAlign:'right'}}>₹{Number(customer.total_spent || 0).toLocaleString()}</td>
+                                    <td style={styles.td}>{new Date(customer.created_at).toLocaleDateString()}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -152,7 +158,10 @@ const styles = {
     searchInput: { flex: 1, maxWidth: '400px', padding: '12px 16px', border: '1px solid #e0e0e0', borderRadius: '10px', fontSize: '14px' },
     resultCount: { fontSize: '14px', color: '#8e9eab' },
     tableContainer: { background: 'white', borderRadius: '16px', overflow: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
-    table: { width: '100%', borderCollapse: 'collapse', minWidth: '600px' },
+    table: { width: '100%', borderCollapse: 'collapse', minWidth: '700px' },
+    th: { padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#444', fontWeight: '600', borderBottom: '2px solid #f0f2f5' },
+    td: { padding: '12px 16px', fontSize: '14px', borderBottom: '1px solid #f0f2f5', color: '#333' },
+    tr: { transition: 'background 0.15s' },
     loading: { textAlign: 'center', padding: '40px', color: '#666' },
 };
 

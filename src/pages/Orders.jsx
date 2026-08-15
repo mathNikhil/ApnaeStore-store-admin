@@ -150,7 +150,30 @@ const Orders = () => {
                         <h1>📋 Orders</h1>
                         <p style={{color:'#8e9eab',marginTop:'4px'}}>Manage and track all orders</p>
                     </div>
-                    <button style={styles.exportBtn} onClick={() => alert('CSV Export coming soon!')}>
+                    <button style={styles.exportBtn} onClick={() => {
+                        const rows = [
+                            ['Order ID', 'Date', 'Customer', 'Phone', 'Amount', 'Items', 'Status', 'Payment Method', 'Payment Status'],
+                            ...orders.map(o => [
+                                o.order_id,
+                                new Date(o.created_at).toLocaleString(),
+                                o.customer_name || '',
+                                o.customer_phone || '',
+                                o.total_amount,
+                                o.items ? (Array.isArray(o.items) ? o.items.length : 1) : 1,
+                                o.status,
+                                o.payment_method || '',
+                                o.payment_status || ''
+                            ])
+                        ];
+                        const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'orders_' + new Date().toISOString().split('T')[0] + '.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }}>
                         📥 Export CSV
                     </button>
                 </div>

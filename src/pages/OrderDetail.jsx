@@ -345,7 +345,14 @@ const OrderDetail = () => {
 
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>📍 Shipping Address</h3>
-                    <p>{order.shipping_address ? JSON.stringify(order.shipping_address) : 'Not provided'}</p>
+                    {order.delivery_address ? (
+                        <div style={{fontSize:'14px',lineHeight:'1.8'}}>
+                            <div><strong>{order.delivery_address.recipientName}</strong> &nbsp;|&nbsp; {order.delivery_address.recipientMobile}</div>
+                            <div>{order.delivery_address.addressLine1}{order.delivery_address.addressLine2 ? ', ' + order.delivery_address.addressLine2 : ''}</div>
+                            <div>{order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}</div>
+                            {order.delivery_address.landmark && <div style={{color:'#666'}}>Landmark: {order.delivery_address.landmark}</div>}
+                        </div>
+                    ) : <p style={{color:'#999'}}>Not provided</p>}
                     {order.notes && <p style={{marginTop:'8px',color:'#666'}}><strong>Notes:</strong> {order.notes}</p>}
                 </div>
 
@@ -354,25 +361,46 @@ const OrderDetail = () => {
                     {order.items ? (
                         <table style={styles.itemTable}>
                             <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                    <th>Total</th>
+                                <tr style={{background:'#f8f9fa'}}>
+                                    <th style={{textAlign:'left',padding:'10px 8px',fontSize:'13px',color:'#444'}}>Product</th>
+                                    <th style={{textAlign:'center',padding:'10px 8px',fontSize:'13px',color:'#444'}}>Qty</th>
+                                    <th style={{textAlign:'right',padding:'10px 8px',fontSize:'13px',color:'#444'}}>Price</th>
+                                    <th style={{textAlign:'right',padding:'10px 8px',fontSize:'13px',color:'#444'}}>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {Array.isArray(order.items) && order.items.map((item, index) => (
-                                    <tr key={index}>
-                                        <td>{item.name}</td>
-                                        <td>{item.quantity}</td>
-                                        <td>₹{item.price}</td>
-                                        <td>₹{item.total || item.price * item.quantity}</td>
+                                    <tr key={index} style={{borderBottom:'1px solid #f0f2f5'}}>
+                                        <td style={{padding:'10px 8px',fontSize:'14px'}}>{item.name}</td>
+                                        <td style={{padding:'10px 8px',fontSize:'14px',textAlign:'center'}}>{item.quantity}</td>
+                                        <td style={{padding:'10px 8px',fontSize:'14px',textAlign:'right'}}>₹{Number(item.price).toLocaleString()}</td>
+                                        <td style={{padding:'10px 8px',fontSize:'14px',textAlign:'right'}}>₹{Number(item.total || item.price * item.quantity).toLocaleString()}</td>
                                     </tr>
                                 ))}
-                                <tr style={styles.totalRow}>
-                                    <td colSpan="3"><strong>Total</strong></td>
-                                    <td><strong>₹{Number(order.total_amount).toLocaleString()}</strong></td>
+                                {order.subtotal > 0 && (
+                                    <tr style={{borderTop:'2px solid #f0f2f5'}}>
+                                        <td style={{color:'#666',fontSize:'13px',padding:'8px 8px 4px'}}>Subtotal</td>
+                                        <td></td><td></td>
+                                        <td style={{color:'#666',fontSize:'13px',padding:'8px 8px 4px',textAlign:'right'}}>₹{Number(order.subtotal).toLocaleString()}</td>
+                                    </tr>
+                                )}
+                                {order.delivery_charge > 0 && (
+                                    <tr>
+                                        <td style={{color:'#666',fontSize:'13px',padding:'4px 8px'}}>Delivery</td>
+                                        <td></td><td></td>
+                                        <td style={{color:'#666',fontSize:'13px',padding:'4px 8px',textAlign:'right'}}>₹{Number(order.delivery_charge).toLocaleString()}</td>
+                                    </tr>
+                                )}
+                                {order.tax_amount > 0 && (
+                                    <tr>
+                                        <td style={{color:'#666',fontSize:'13px',padding:'4px 8px'}}>GST</td>
+                                        <td></td><td></td>
+                                        <td style={{color:'#666',fontSize:'13px',padding:'4px 8px',textAlign:'right'}}>₹{Number(order.tax_amount).toLocaleString()}</td>
+                                    </tr>
+                                )}
+                                <tr style={{borderTop:'2px solid #f0f2f5',background:'#f8f9fa'}}>
+                                    <td colSpan="3" style={{padding:'12px 8px',fontWeight:'700',fontSize:'15px'}}>Grand Total</td>
+                                    <td style={{padding:'12px 8px',fontWeight:'700',fontSize:'15px',textAlign:'right',color:'#2ecc71'}}>₹{Number(order.total_amount).toLocaleString()}</td>
                                 </tr>
                             </tbody>
                         </table>
