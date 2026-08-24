@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
+import OrderBill from './pages/OrderBill';
 import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Staff from './pages/Staff';
@@ -69,6 +70,7 @@ const App = () => {
                 <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders" element={isAuthenticated ? <Orders /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/orders/:id/bill" element={isAuthenticated ? <OrderBill /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/customers" element={isAuthenticated ? <Customers /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/staff" element={isAuthenticated ? <Staff /> : <Navigate to={`/login${window.location.search}`} />} />

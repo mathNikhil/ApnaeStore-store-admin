@@ -181,9 +181,21 @@ const OrderDetail = () => {
                         <button style={styles.backBtn} onClick={() => navigate('/orders')}>← Back to Orders</button>
                         <h1 style={{marginTop:'8px'}}>Order #{order.order_id || order.id}</h1>
                     </div>
-                    <span className={getStatusClass(order.status)} style={{fontSize:'14px',padding:'8px 16px'}}>
-                        {getStatusLabel(order.status)}
-                    </span>
+                    <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                        <button
+                            onClick={() => {
+                                const billId = order.id || id;
+                                const qs = window.location.search;
+                                navigate(`/orders/${billId}/bill${qs}`);
+                            }}
+                            style={{padding:'8px 16px', background:'#006d2f', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'13px'}}
+                        >
+                            🖨 Print Invoice
+                        </button>
+                        <span className={getStatusClass(order.status)} style={{fontSize:'14px',padding:'8px 16px'}}>
+                            {getStatusLabel(order.status)}
+                        </span>
+                    </div>
                 </div>
 
                 <div style={styles.statusUpdateCard}>
@@ -371,6 +383,13 @@ const OrderDetail = () => {
                             <tbody>
                                 {Array.isArray(order.items) && order.items.map((item, index) => (
                                     <tr key={index} style={{borderBottom:'1px solid #f0f2f5'}}>
+                                        <td style={{padding:'6px 8px'}}>
+                                            {item.image || item.product_image ? (
+                                                <img src={item.image || item.product_image} alt={item.name} style={{width:44,height:44,objectFit:'cover',borderRadius:6}} />
+                                            ) : (
+                                                <div style={{width:44,height:44,background:'#f2f4f7',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>📦</div>
+                                            )}
+                                        </td>
                                         <td style={{padding:'10px 8px',fontSize:'14px'}}>{item.name}</td>
                                         <td style={{padding:'10px 8px',fontSize:'14px',textAlign:'center'}}>{item.quantity}</td>
                                         <td style={{padding:'10px 8px',fontSize:'14px',textAlign:'right'}}>₹{Number(item.price).toLocaleString()}</td>
