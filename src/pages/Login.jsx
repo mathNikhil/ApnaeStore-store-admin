@@ -8,6 +8,7 @@ import { storeAdminAuthAPI } from '../services/api';
 // on the tenant's dashboard, shared with whoever needs to manage it.
 const Login = () => {
     const [password, setPassword] = useState('');
+    const passwordRef = React.useRef(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [subdomain, setSubdomain] = useState(null);
@@ -16,6 +17,11 @@ const Login = () => {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         setSubdomain(params.get('store'));
+        // Clear any browser-autofilled password
+        setTimeout(() => {
+            if (passwordRef.current) passwordRef.current.value = '';
+            setPassword('');
+        }, 100);
     }, []);
 
     const handleLogin = async (e) => {
@@ -72,7 +78,9 @@ const Login = () => {
                         <label style={styles.label}>Password</label>
                         <input
                             type="password"
+                            ref={passwordRef}
                             value={password}
+                            autoComplete="new-password"
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Enter store admin password"
                             required
