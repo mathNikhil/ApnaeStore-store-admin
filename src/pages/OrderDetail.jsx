@@ -187,7 +187,9 @@ const OrderDetail = () => {
                             onClick={() => {
                                 const billId = order.id || id;
                                 const qs = window.location.search;
-                                navigate(`/orders/${billId}/bill${qs}`);
+                                const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
+                                const sep = qs ? '&' : '?';
+                                window.open(`/orders/${billId}/bill${qs}${sep}subdomain=${subdomain}`, '_blank');
                             }}
                             style={{padding:'8px 16px', background:'#006d2f', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'13px'}}
                         >

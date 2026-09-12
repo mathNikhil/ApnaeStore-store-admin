@@ -61,7 +61,7 @@ const App = () => {
         if (!storeId) return;
         console.log('[OrderAlert] Starting polling for store:', storeId);
 
-        let lastOrderCount = null;
+        let lastOrderId = null;
         window._orderAlertUnlocked = false;
 
         // Unlock audio on first user interaction (browser autoplay policy)
@@ -76,24 +76,25 @@ const App = () => {
                 const token = localStorage.getItem('storeAdminToken');
                 if (!token) return;
                 const res = await fetch(
-                    `https://api.aapnaestore.com/api/store/${storeId}/admin/orders`,
+                    `https://api.aapnaestore.com/api/store/${storeId}/admin/orders?status=all&limit=100`,
                     { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
                 );
                 if (!res.ok) return;
                 const data = await res.json();
                 if (!data.success) return;
-                const count = Array.isArray(data.data) ? data.data.length : 0;
-                console.log('[OrderAlert] count:', count, 'last:', lastOrderCount, 'unlocked:', window._orderAlertUnlocked);
-                if (lastOrderCount !== null && count > lastOrderCount && window._orderAlertUnlocked) {
-                    console.log('[OrderAlert] NEW ORDER');
+                const orders = Array.isArray(data.data) ? data.data : [];
+                const latestId = orders.length > 0 ? orders[0].order_id || orders[0].id : null;
+                console.log('[OrderAlert] latest:', latestId, 'prev:', lastOrderId, 'unlocked:', window._orderAlertUnlocked);
+                if (lastOrderId !== null && latestId !== lastOrderId && window._orderAlertUnlocked) {
+                    console.log('[OrderAlert] NEW ORDER DETECTED');
                     playRisingChime();
                 }
-                lastOrderCount = count;
+                lastOrderId = latestId;
             } catch (e) { console.error('[OrderAlert] fetch error:', e); }
         };
 
         checkNewOrders(); // initial fetch
-        const interval = setInterval(checkNewOrders, 30000);
+        const interval = setInterval(checkNewOrders, 10000);
         return () => {
             clearInterval(interval);
             document.removeEventListener('click', unlockAudio);

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { storeAdminAPI } from '../services/api';
 
 const OrderBill = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [order, setOrder] = useState(null);
     const [storeInfo, setStoreInfo] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -22,10 +23,20 @@ const OrderBill = () => {
         try {
             const result = await storeAdminAPI.getOrder(storeId, id);
             if (result.success) setOrder(result.data);
-            // Try to get store info
+            // Fetch full store config from public API for bill header
             try {
-                const storeResult = await storeAdminAPI.getStoreInfo(storeId);
-                if (storeResult?.success) setStoreInfo(storeResult.data);
+                const urlParams = new URLSearchParams(location.search);
+                // Get subdomain from URL params, query string, or hostname
+                const hostname = window.location.hostname;
+                const hostnameSubdomain = hostname.includes('.aapnaestore.com') ? hostname.split('.')[0] : null;
+                const subdomain = urlParams.get('subdomain') || urlParams.get('store') || hostnameSubdomain;
+                console.log('[Bill] subdomain:', subdomain, 'hostname:', hostname);
+                if (subdomain) {
+                    const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
+                    const res = await fetch(`${API}/api/public/store/${subdomain}`);
+                    const storeResult = await res.json();
+                    if (storeResult?.success) setStoreInfo(storeResult.data);
+                }
             } catch {}
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -41,10 +52,13 @@ const OrderBill = () => {
     const orderDate = order.created_at
         ? new Date(order.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
         : 'N/A';
-    const storeName = storeInfo?.store_name || order.store_name || 'Store';
-    const storePhone = storeInfo?.contact_phone || storeInfo?.phone || '';
-    const storeEmail = storeInfo?.contact_email || storeInfo?.email || '';
-    const storeAddress = storeInfo?.address || '';
+    const storeName = storeInfo?.config?.brand?.storeName || storeInfo?.store_name || order.store_name || localStorage.getItem('currentStoreName') || 'Store';
+    const storePhone = storeInfo?.config?.profile?.officeNumber || '';
+    const storeEmail = storeInfo?.config?.profile?.supportEmail || '';
+    const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
+    const storeLogo = storeInfo?.config?.brand?.logoUrl || null;
+    const storeGST = storeInfo?.config?.cart?.gstNumber || '';
+    const storeTagline = storeInfo?.config?.brand?.tagline || '';
 
     return (
         <>
@@ -61,10 +75,12 @@ const OrderBill = () => {
 
                 {/* Header */}
                 <div style={styles.header}>
+                    {storeLogo && <img src={storeLogo} alt={storeName} style={{height:'60px',objectFit:'contain',marginBottom:'8px'}} />}
                     <div style={styles.storeName}>{storeName}</div>
                     {storeAddress && <div style={styles.storeDetail}>{storeAddress}</div>}
                     {storePhone && <div style={styles.storeDetail}>📞 {storePhone}</div>}
                     {storeEmail && <div style={styles.storeDetail}>✉ {storeEmail}</div>}
+                    {storeGST && <div style={styles.storeDetail}>GSTIN: {storeGST}</div>}
                 </div>
 
                 <div style={styles.divider} />
@@ -165,6 +181,12 @@ const OrderBill = () => {
 
                 {/* Totals */}
                 <div style={styles.totalsWrap}>
+                    {order.tax_amount > 0 && (
+                        <div style={styles.totalRow}>
+                            <span>GST{storeGST ? <span style={{fontSize:'11px',color:'#999',marginLeft:'6px'}}>GSTIN: {storeGST}</span> : ''}</span>
+                            <span>₹{Number(order.tax_amount).toLocaleString('en-IN')}</span>
+                        </div>
+                    )}
                     {order.delivery_charge > 0 && (
                         <div style={styles.totalRow}>
                             <span>Delivery Charge</span>
