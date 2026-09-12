@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { storeAdminAPI } from './services/api';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -13,6 +14,28 @@ import Returns from './pages/Returns';
 import ReturnDetail from './pages/ReturnDetail';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
+// Rising chime alert — plays when new order arrives
+const playRisingChime = () => {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ac = new AudioCtx();
+        const notes = [523, 659, 784, 1047];
+        notes.forEach((freq, i) => {
+            const o = ac.createOscillator();
+            const g = ac.createGain();
+            o.connect(g);
+            g.connect(ac.destination);
+            o.frequency.value = freq;
+            const t = ac.currentTime + i * 0.18;
+            g.gain.setValueAtTime(0.5, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+            o.start(t);
+            o.stop(t + 0.4);
+        });
+    } catch (e) {}
+};
 
 const App = () => {
     // Runs on every render (cheap, idempotent) so this is resolved
@@ -31,6 +54,51 @@ const App = () => {
     }
 
     const isAuthenticated = !!localStorage.getItem('storeAdminToken') && !!localStorage.getItem('currentStoreId');
+
+    // ── New order sound alert — polls every 30s when logged in ──────────
+    useEffect(() => {
+        const storeId = localStorage.getItem('currentStoreId');
+        if (!storeId) return;
+        console.log('[OrderAlert] Starting polling for store:', storeId);
+
+        let lastOrderCount = null;
+        window._orderAlertUnlocked = false;
+
+        // Unlock audio on first user interaction (browser autoplay policy)
+        const unlockAudio = () => { 
+            window._orderAlertUnlocked = true;
+            console.log('[OrderAlert] Audio unlocked');
+        };
+        document.addEventListener('click', unlockAudio, { once: true });
+
+        const checkNewOrders = async () => {
+            try {
+                const token = localStorage.getItem('storeAdminToken');
+                if (!token) return;
+                const res = await fetch(
+                    `https://api.aapnaestore.com/api/store/${storeId}/admin/orders`,
+                    { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.success) return;
+                const count = Array.isArray(data.data) ? data.data.length : 0;
+                console.log('[OrderAlert] count:', count, 'last:', lastOrderCount, 'unlocked:', window._orderAlertUnlocked);
+                if (lastOrderCount !== null && count > lastOrderCount && window._orderAlertUnlocked) {
+                    console.log('[OrderAlert] NEW ORDER');
+                    playRisingChime();
+                }
+                lastOrderCount = count;
+            } catch (e) { console.error('[OrderAlert] fetch error:', e); }
+        };
+
+        checkNewOrders(); // initial fetch
+        const interval = setInterval(checkNewOrders, 30000);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('click', unlockAudio);
+        };
+    }, []);
 
     // ✅ Free up the session as soon as the tab/browser actually closes,
     // instead of leaving it "active" until the idle timeout expires. Uses

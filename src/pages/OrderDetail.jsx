@@ -141,6 +141,7 @@ const OrderDetail = () => {
 
     // All statuses
     const allStatuses = [
+        { value: 'pending', label: '⏳ Pending' },
         { value: 'confirmed', label: 'Confirmed' },
         { value: 'processing', label: 'Processing' },
         { value: 'accepted', label: 'Accept for Production' },

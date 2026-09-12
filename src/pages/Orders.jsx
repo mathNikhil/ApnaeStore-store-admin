@@ -98,6 +98,7 @@ const Orders = () => {
     // Status options for filter
     const statusOptions = [
         { value: 'all', label: 'All Status' },
+        { value: 'pending', label: 'Pending' },
         { value: 'confirmed', label: 'Confirmed' },
         { value: 'processing', label: 'Processing' },
         { value: 'accepted', label: 'Accept for Production' },
@@ -109,6 +110,7 @@ const Orders = () => {
 
     // All statuses for dropdown
     const allStatuses = [
+        { value: 'pending', label: '⏳ Pending' },
         { value: 'confirmed', label: 'Confirmed' },
         { value: 'processing', label: 'Processing' },
         { value: 'accepted', label: 'Accept for Production' },
