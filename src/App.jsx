@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import Staff from './pages/Staff';
 import Couriers from './pages/Couriers';
 import Returns from './pages/Returns';
+import Inventory from './pages/Inventory';
 import ReturnDetail from './pages/ReturnDetail';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -45,7 +46,7 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     const urlSubdomain = params.get('store');
     const storedSubdomain = localStorage.getItem('currentStoreSubdomain');
-    if (urlSubdomain && urlSubdomain !== storedSubdomain) {
+    if (urlSubdomain && storedSubdomain && urlSubdomain !== storedSubdomain) {
         localStorage.removeItem('storeAdminToken');
         localStorage.removeItem('storeAdminUser');
         localStorage.removeItem('currentStoreId');
@@ -110,7 +111,11 @@ const App = () => {
     // force-quit, which is exactly what the idle timeout still exists for
     // as a fallback.
     useEffect(() => {
-        const handlePageHide = () => {
+        const handlePageHide = (e) => {
+            // Only logout if page is truly being unloaded (not just refreshed)
+            // e.persisted = true means page is going into bfcache (navigation)
+            // visibilitychange to hidden + persisted = false = actual close
+            if (e.persisted) return; // page is being cached, not closed
             const token = localStorage.getItem('storeAdminToken');
             const storeId = localStorage.getItem('currentStoreId');
             if (!token || !storeId) return;
@@ -146,6 +151,7 @@ const App = () => {
                 <Route path="/couriers" element={isAuthenticated ? <Couriers /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/returns" element={isAuthenticated ? <Returns /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/returns/:id" element={isAuthenticated ? <ReturnDetail /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/inventory" element={isAuthenticated ? <Inventory /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
         </BrowserRouter>

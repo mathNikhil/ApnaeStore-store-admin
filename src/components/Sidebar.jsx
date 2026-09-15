@@ -68,14 +68,17 @@ const Sidebar = () => {
                 <Link to="/customers" style={{...styles.navLink, ...styles[isActive('/customers')]}}>
                     <span style={styles.icon}>👤</span><span>Customers</span>
                 </Link>
+                <Link to="/inventory" style={{...styles.navLink, ...styles[isActive('/inventory')]}}>
+                    <span style={styles.icon}>📦</span><span>Inventory</span>
+                </Link>
+                <Link to="/couriers" style={{...styles.navLink, ...styles[isActive('/couriers')]}}>
+                    <span style={styles.icon}>🚚</span><span>Couriers</span>
+                </Link>
                 <Link to="/reports" style={{...styles.navLink, ...styles[isActive('/reports')]}}>
                     <span style={styles.icon}>📈</span><span>Reports</span>
                 </Link>
                 <Link to="/staff" style={{...styles.navLink, ...styles[isActive('/staff')]}}>
                     <span style={styles.icon}>👥</span><span>Staff</span>
-                </Link>
-                <Link to="/couriers" style={{...styles.navLink, ...styles[isActive('/couriers')]}}>
-                    <span style={styles.icon}>🚚</span><span>Couriers</span>
                 </Link>
             </nav>
             <button onClick={handleLogout} style={styles.logoutBtn}>🚪 <span>Logout</span></button>
