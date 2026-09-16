@@ -102,40 +102,7 @@ const App = () => {
         };
     }, []);
 
-    // ✅ Free up the session as soon as the tab/browser actually closes,
-    // instead of leaving it "active" until the idle timeout expires. Uses
-    // navigator.sendBeacon, which is specifically designed to reliably fire
-    // during page teardown — a normal fetch/axios call is often cancelled
-    // mid-flight when the tab closes before it completes. This only covers
-    // an actual close/navigate-away; it can't catch a browser crash or a
-    // force-quit, which is exactly what the idle timeout still exists for
-    // as a fallback.
-    useEffect(() => {
-        const handlePageHide = (e) => {
-            // Only logout if page is truly being unloaded (not just refreshed)
-            // e.persisted = true means page is going into bfcache (navigation)
-            // visibilitychange to hidden + persisted = false = actual close
-            if (e.persisted) return; // page is being cached, not closed
-            const token = localStorage.getItem('storeAdminToken');
-            const storeId = localStorage.getItem('currentStoreId');
-            if (!token || !storeId) return;
-            // ✅ FIX: 'application/json' is NOT a CORS-safelisted content
-            // type, and this is a cross-origin request (Store Admin on
-            // :3006, backend on :5002 — different ports = different
-            // origins). sendBeacon cannot perform the preflight negotiation
-            // a normal JSON POST would trigger here, so the request was
-            // likely being silently dropped. 'text/plain' IS CORS-simple,
-            // so sendBeacon can actually deliver it — the backend parses
-            // this specific content type as JSON too (see server.js).
-            const blob = new Blob(
-                [JSON.stringify({ storeId, token })],
-                { type: 'text/plain' }
-            );
-            navigator.sendBeacon(`${API_BASE_URL}/api/store-admin/logout`, blob);
-        };
-        window.addEventListener('pagehide', handlePageHide);
-        return () => window.removeEventListener('pagehide', handlePageHide);
-    }, []);
+    // Session managed by idle timeout on backend (3 hours). Explicit logout via sidebar button.
 
     return (
         <BrowserRouter>
