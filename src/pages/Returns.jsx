@@ -97,7 +97,7 @@ const Returns = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <div style={styles.loading}>Loading returns...</div>
                 </div>
             </div>
@@ -108,7 +108,7 @@ const Returns = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <h1>Select a Store</h1>
                     <p style={{ color: '#8e9eab' }}>Please select a store to manage</p>
                 </div>
@@ -119,7 +119,7 @@ const Returns = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <div style={styles.header}>
                     <div>
                         <h1>↩️ Returns</h1>
@@ -198,7 +198,7 @@ const Returns = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '30px', marginLeft: '260px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '30px', marginLeft: window.innerWidth <= 900 ? 0 : 260 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
     searchBar: { display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
     searchInput: { flex: 1, minWidth: '200px', padding: '12px 16px', border: '1px solid #e0e0e0', borderRadius: '10px', fontSize: '14px' },

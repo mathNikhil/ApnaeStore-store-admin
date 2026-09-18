@@ -70,7 +70,7 @@ const Dashboard = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <div style={styles.loading}>Loading dashboard...</div>
                 </div>
             </div>
@@ -84,7 +84,7 @@ const Dashboard = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <div style={styles.header}>
                     <div>
                         <h1>📊 Dashboard</h1>
@@ -208,7 +208,7 @@ const Dashboard = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '30px', marginLeft: '260px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '30px', marginLeft: window.innerWidth <= 900 ? 0 : 260 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
     headerRight: { display: 'flex', gap: '12px', alignItems: 'center' },
     dateRange: { padding: '8px 16px', background: 'white', borderRadius: '8px', fontSize: '14px', color: '#666' },

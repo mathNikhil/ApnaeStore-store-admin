@@ -124,7 +124,7 @@ const Orders = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <div style={styles.loading}>Loading orders...</div>
                 </div>
             </div>
@@ -135,7 +135,7 @@ const Orders = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <h1>Select a Store</h1>
                     <p style={{color:'#8e9eab'}}>Please select a store to manage</p>
                 </div>
@@ -146,7 +146,7 @@ const Orders = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <div style={styles.header}>
                     <div>
                         <h1>📋 Orders</h1>
@@ -254,7 +254,7 @@ const Orders = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '30px', marginLeft: '260px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '30px', marginLeft: window.innerWidth <= 900 ? 0 : 260 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
     exportBtn: { padding: '10px 20px', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' },
     searchBar: { display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },

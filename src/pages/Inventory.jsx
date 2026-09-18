@@ -20,9 +20,36 @@ const Inventory = () => {
     const [expandedVariants, setExpandedVariants] = useState({});
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
+    const [threshold, setThreshold] = useState(10);
+    const [thresholdInput, setThresholdInput] = useState(10);
+    const [savingThreshold, setSavingThreshold] = useState(false);
     const fileRef = useRef();
 
-    useEffect(() => { fetchInventory(); }, []);
+    useEffect(() => {
+        fetchInventory();
+        fetchThreshold();
+    }, []);
+
+    const fetchThreshold = async () => {
+        try {
+            const res = await fetch(`${API}/api/store/${storeId}/inventory/threshold`, { headers: hdrs });
+            const data = await res.json();
+            if (data.success) { setThreshold(data.data.threshold); setThresholdInput(data.data.threshold); }
+        } catch (e) {}
+    };
+
+    const saveThreshold = async () => {
+        setSavingThreshold(true);
+        try {
+            const res = await fetch(`${API}/api/store/${storeId}/inventory/threshold`, {
+                method: 'PUT', headers: hdrs,
+                body: JSON.stringify({ threshold: parseInt(thresholdInput) })
+            });
+            const data = await res.json();
+            if (data.success) setThreshold(data.data.threshold);
+        } catch (e) {}
+        setSavingThreshold(false);
+    };
 
     const fetchInventory = async () => {
         setLoading(true);
@@ -128,7 +155,7 @@ const Inventory = () => {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
             <Sidebar />
-            <div style={{ marginLeft: 260, flex: 1, padding: 24 }}>
+            <div style={{ marginLeft: window.innerWidth <= 900 ? 0 : 260, flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : 24 }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
                     <div>
@@ -170,6 +197,24 @@ const Inventory = () => {
                 <div style={{ background: '#fff', borderRadius: 12, padding: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 16 }}>
                     <input type="text" placeholder="🔍 Search products..." value={search} onChange={e => setSearch(e.target.value)}
                         style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 16px', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+
+                {/* Low Stock Threshold */}
+                <div style={{ background: '#fff', borderRadius: 12, padding: '12px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 16 }}>⚠️</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>Low Stock Alert</span>
+                    <span style={{ fontSize: 14, color: '#556067' }}>Highlight products below</span>
+                    <input type="number" min="1" value={thresholdInput}
+                        onChange={e => setThresholdInput(e.target.value)}
+                        style={{ width: 70, border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 14, outline: 'none', textAlign: 'center' }} />
+                    <span style={{ fontSize: 14, color: '#556067' }}>units</span>
+                    <button onClick={saveThreshold} disabled={savingThreshold}
+                        style={{ background: '#006d2f', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                        {savingThreshold ? 'Saving...' : 'Set'}
+                    </button>
+                    <span style={{ fontSize: 12, color: '#556067' }}>
+                        🔴 Red = below {threshold} units &nbsp; Current default: {threshold}
+                    </span>
                 </div>
 
                 {/* Table */}
@@ -249,11 +294,12 @@ const Inventory = () => {
                                                     const vReturned = sumSizes(vSizes, 'total_returned');
                                                     const vCurrent = vInStock - vSold + vReturned;
                                                     const vValue = vSizes.reduce((s, r) => s + parseFloat(r.total_value || 0), 0);
+                                                    const vHasLowStock = vSizes.some(s => parseInt(s.current_stock || 0) < threshold);
 
                                                     return (
                                                         <React.Fragment key={variant.variation_id}>
                                                             {/* Variant Row */}
-                                                            <tr style={{ background: '#f9fafb', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
+                                                            <tr style={{ background: vHasLowStock ? '#fff5f5' : '#f9fafb', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
                                                                 <td style={styles.td}>
                                                                     {variant.image_url
                                                                         ? <img src={variant.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, marginLeft: 12 }} />
@@ -277,7 +323,7 @@ const Inventory = () => {
                                                             {isVariantExpanded && vSizes.map(item => {
                                                                 const currentStock = parseInt(item.current_stock || 0);
                                                                 const isOut = currentStock <= 0;
-                                                                const isLow = currentStock > 0 && currentStock < 5;
+                                                                const isLow = currentStock > 0 && currentStock < threshold;
                                                                 return (
                                                                     <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff' }}>
                                                                         <td style={styles.td}></td>

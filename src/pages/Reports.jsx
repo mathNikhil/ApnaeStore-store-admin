@@ -21,7 +21,7 @@ const Reports = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <div style={styles.header}>
                     <div>
                         <h1>📈 Reports</h1>
@@ -74,7 +74,7 @@ const Reports = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '30px', marginLeft: '260px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '30px', marginLeft: window.innerWidth <= 900 ? 0 : 260 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
     dateSelect: { padding: '10px 16px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '14px', background: '#fff' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' },

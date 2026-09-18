@@ -155,7 +155,7 @@ const OrderDetail = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <div style={styles.loading}>Loading order details...</div>
                 </div>
             </div>
@@ -166,7 +166,7 @@ const OrderDetail = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}>
+                <div className="main-content" style={styles.main}>
                     <div style={styles.loading}>Order not found</div>
                 </div>
             </div>
@@ -176,7 +176,7 @@ const OrderDetail = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <div style={styles.header}>
                     <div>
                         <button style={styles.backBtn} onClick={() => navigate('/orders')}>← Back to Orders</button>
@@ -194,6 +194,20 @@ const OrderDetail = () => {
                             style={{padding:'8px 16px', background:'#006d2f', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'13px'}}
                         >
                             🖨 Print Invoice
+                        </button>
+                        <button
+                            onClick={() => {
+                                const billId = order.id || order.order_id;
+                                const qs = window.location.search;
+                                const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
+                                const sep = qs ? '&' : '?';
+                                const storeId = localStorage.getItem('currentStoreId') || '';
+                                const tToken = localStorage.getItem('storeAdminToken') || '';
+                                window.open(`/orders/${billId}/thermal${qs}${sep}subdomain=${subdomain}&storeId=${storeId}&t=${tToken}`, '_blank');
+                            }}
+                            style={{padding:'8px 16px', background:'#374151', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'13px'}}
+                        >
+                            🧾 Print Bill
                         </button>
                         <span className={getStatusClass(order.status)} style={{fontSize:'14px',padding:'8px 16px'}}>
                             {getStatusLabel(order.status)}
@@ -459,7 +473,7 @@ const OrderDetail = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '30px', marginLeft: '260px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '30px', marginLeft: window.innerWidth <= 900 ? 0 : 260 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
     upiCheckBox: { marginTop: '12px', padding: '10px 12px', background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: '8px' },
     backBtn: { color: '#667eea', cursor: 'pointer', fontWeight: '600', fontSize: '14px', border: 'none', background: 'none' },

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import OrderBill from './pages/OrderBill';
+import ThermalBill from './pages/ThermalBill';
 import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Staff from './pages/Staff';
@@ -46,7 +47,14 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     const urlSubdomain = params.get('store');
     const storedSubdomain = localStorage.getItem('currentStoreSubdomain');
-    if (urlSubdomain && storedSubdomain && urlSubdomain !== storedSubdomain) {
+    const isThermalPage = window.location.pathname.includes('/thermal');
+    // Restore session from URL params on thermal page
+    if (isThermalPage) {
+        const tp = new URLSearchParams(window.location.search);
+        if (tp.get('t')) localStorage.setItem('storeAdminToken', tp.get('t'));
+        if (tp.get('storeId')) localStorage.setItem('currentStoreId', tp.get('storeId'));
+        if (tp.get('subdomain')) localStorage.setItem('currentStoreSubdomain', tp.get('subdomain'));
+    } else if (urlSubdomain && storedSubdomain && urlSubdomain !== storedSubdomain) {
         localStorage.removeItem('storeAdminToken');
         localStorage.removeItem('storeAdminUser');
         localStorage.removeItem('currentStoreId');
@@ -112,6 +120,7 @@ const App = () => {
                 <Route path="/orders" element={isAuthenticated ? <Orders /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders/:id/bill" element={isAuthenticated ? <OrderBill /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/orders/:id/thermal" element={<ThermalBill />} />
                 <Route path="/customers" element={isAuthenticated ? <Customers /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/staff" element={isAuthenticated ? <Staff /> : <Navigate to={`/login${window.location.search}`} />} />

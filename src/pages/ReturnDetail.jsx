@@ -125,7 +125,7 @@ const ReturnDetail = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}><div style={styles.loading}>Loading...</div></div>
+                <div className="main-content" style={styles.main}><div style={styles.loading}>Loading...</div></div>
             </div>
         );
     }
@@ -133,7 +133,7 @@ const ReturnDetail = () => {
         return (
             <div style={styles.container}>
                 <Sidebar />
-                <div style={styles.main}><div style={styles.loading}>Return not found.</div></div>
+                <div className="main-content" style={styles.main}><div style={styles.loading}>Return not found.</div></div>
             </div>
         );
     }
@@ -143,7 +143,7 @@ const ReturnDetail = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <button style={styles.backBtn} onClick={() => navigate('/returns')}>← Back to Returns</button>
 
                 <div style={styles.headerRow}>
@@ -300,7 +300,7 @@ const ReturnDetail = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '30px', marginLeft: '260px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '30px', marginLeft: window.innerWidth <= 900 ? 0 : 260 },
     loading: { textAlign: 'center', padding: '40px', color: '#666' },
     backBtn: { background: 'none', border: 'none', color: '#667eea', fontWeight: '600', cursor: 'pointer', marginBottom: '16px', fontSize: '14px' },
     headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },

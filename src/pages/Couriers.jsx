@@ -77,7 +77,7 @@ const Couriers = () => {
     return (
         <div style={styles.container}>
             <Sidebar />
-            <div style={styles.main}>
+            <div className="main-content" style={styles.main}>
                 <h1>🚚 My Couriers</h1>
                 <p style={{ color: '#8e9eab', marginBottom: '20px' }}>
                     Add the courier or logistics partners you actually use. You'll pick from this list when marking an order Out for Delivery.
@@ -140,7 +140,7 @@ const Couriers = () => {
 
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f5f6fa' },
-    main: { flex: 1, marginLeft: '260px', padding: '32px', maxWidth: '700px' },
+    main: { flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : '32px', marginLeft: window.innerWidth <= 900 ? 0 : 260, maxWidth: '700px' },
     addCard: { background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' },
     input: { padding: '10px 12px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px' },
     addBtn: { padding: '10px', background: '#1e8e3e', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' },

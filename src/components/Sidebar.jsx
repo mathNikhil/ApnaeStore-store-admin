@@ -2,7 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { storeAdminAuthAPI, storeAdminAPI } from '../services/api';
 
-const Sidebar = () => {
+// Inject responsive styles once
+if (!document.getElementById('store-admin-responsive')) {
+    const style = document.createElement('style');
+    style.id = 'store-admin-responsive';
+    style.textContent = `
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0 !important; padding: 60px 16px 16px !important; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+const Sidebar = ({ onToggle }) => {
+    const [isMobileOpen, setIsMobileOpen] = React.useState(false);
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 900);
+
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 900);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const toggleMobile = () => setIsMobileOpen(p => !p);
     const navigate = useNavigate();
     const location = useLocation();
     const storeName = localStorage.getItem('currentStoreName');
@@ -45,8 +67,37 @@ const Sidebar = () => {
 
     const isActive = (path) => location.pathname === path ? 'active' : '';
 
+    // Inject hamburger into body to avoid transform stacking context issue
+    React.useEffect(() => {
+        if (!isMobile) return;
+        let btn = document.getElementById('mobile-hamburger');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'mobile-hamburger';
+            btn.style.cssText = 'position:fixed;top:12px;left:12px;z-index:1100;border:none;border-radius:8px;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+            document.body.appendChild(btn);
+        }
+        btn.style.background = isMobileOpen ? '#dc2626' : '#1a1a2e';
+        btn.style.color = '#fff';
+        btn.textContent = isMobileOpen ? '✕' : '☰';
+        btn.onclick = toggleMobile;
+        return () => {};
+    }, [isMobile, isMobileOpen]);
+
+    React.useEffect(() => {
+        return () => {
+            const btn = document.getElementById('mobile-hamburger');
+            if (btn) btn.remove();
+        };
+    }, []);
+
     return (
-        <div style={styles.sidebar}>
+        <>
+        {/* Overlay */}
+        {isMobile && isMobileOpen && (
+            <div onClick={toggleMobile} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }} />
+        )}
+        <div style={{ ...styles.sidebar, transform: isMobile ? (isMobileOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)', transition: 'transform 0.25s ease', zIndex: 1000 }}>
             <div style={styles.logo}>
                 <h2>📊 Store<span style={{color:'#667eea'}}>Admin</span></h2>
                 <div style={styles.subtitle}>Order Management</div>
@@ -58,31 +109,32 @@ const Sidebar = () => {
                 </div>
             )}
             <nav style={styles.nav}>
-                <Link to="/dashboard" style={{...styles.navLink, ...styles[isActive('/dashboard')]}}>
+                <Link to="/dashboard" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/dashboard')]}}>
                     <span style={styles.icon}>📊</span><span>Dashboard</span>
                 </Link>
-                <Link to="/orders" style={{...styles.navLink, ...styles[isActive('/orders')]}}>
+                <Link to="/orders" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/orders')]}}>
                     <span style={styles.icon}>📋</span><span>Orders</span>
                     {pendingCount > 0 && <span style={styles.badge}>{pendingCount}</span>}
                 </Link>
-                <Link to="/customers" style={{...styles.navLink, ...styles[isActive('/customers')]}}>
+                <Link to="/customers" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/customers')]}}>
                     <span style={styles.icon}>👤</span><span>Customers</span>
                 </Link>
-                <Link to="/inventory" style={{...styles.navLink, ...styles[isActive('/inventory')]}}>
+                <Link to="/inventory" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/inventory')]}}>
                     <span style={styles.icon}>📦</span><span>Inventory</span>
                 </Link>
-                <Link to="/couriers" style={{...styles.navLink, ...styles[isActive('/couriers')]}}>
+                <Link to="/couriers" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/couriers')]}}>
                     <span style={styles.icon}>🚚</span><span>Couriers</span>
                 </Link>
-                <Link to="/reports" style={{...styles.navLink, ...styles[isActive('/reports')]}}>
+                <Link to="/reports" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/reports')]}}>
                     <span style={styles.icon}>📈</span><span>Reports</span>
                 </Link>
-                <Link to="/staff" style={{...styles.navLink, ...styles[isActive('/staff')]}}>
+                <Link to="/staff" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/staff')]}}>
                     <span style={styles.icon}>👥</span><span>Staff</span>
                 </Link>
             </nav>
             <button onClick={handleLogout} style={styles.logoutBtn}>🚪 <span>Logout</span></button>
         </div>
+        </>
     );
 };
 
