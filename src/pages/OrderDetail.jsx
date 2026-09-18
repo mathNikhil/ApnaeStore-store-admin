@@ -180,7 +180,13 @@ const OrderDetail = () => {
                 <div style={styles.header}>
                     <div>
                         <button style={styles.backBtn} onClick={() => navigate('/orders')}>← Back to Orders</button>
-                        <h1 style={{marginTop:'8px'}}>Order #{order.order_id || order.id}</h1>
+                        <h1 style={{marginTop:'8px'}}>Order #{order.order_id || order.id}
+                            {order.order_type === 'dine_in' && (
+                                <span style={{marginLeft:12, fontSize:13, background:'#f59e0b', color:'#fff', padding:'2px 10px', borderRadius:20, fontWeight:600, verticalAlign:'middle'}}>
+                                    🍽️ DINE IN
+                                </span>
+                            )}
+                        </h1>
                     </div>
                     <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                         <button
@@ -347,6 +353,7 @@ const OrderDetail = () => {
                         <div style={styles.infoRow}><strong>Date:</strong> {new Date(order.created_at).toLocaleString()}</div>
                         <div style={styles.infoRow}><strong>Total:</strong> ₹{Number(order.total_amount).toLocaleString()}</div>
                         <div style={styles.infoRow}><strong>Payment Method:</strong> {order.payment_method === 'upi' ? 'UPI' : (order.payment_method || '—')}</div>
+                        <div style={styles.infoRow}><strong>Order Type:</strong> {order.order_type === 'dine_in' ? '🍽️ Dine In' : '🚚 Delivery'}</div>
                         <div style={styles.infoRow}><strong>Payment:</strong> {order.payment_status || 'Pending'}</div>
                         <div style={styles.infoRow}><strong>Items:</strong> {order.items ? (Array.isArray(order.items) ? order.items.length : 1) : 1}</div>
 
