@@ -48,6 +48,7 @@ const ThermalBill = () => {
     const storePhone = storeInfo?.config?.profile?.officeNumber || '';
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeGST = storeInfo?.config?.cart?.gstNumber || '';
+    const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
 
@@ -77,7 +78,11 @@ const ThermalBill = () => {
                 </div>
                 <div style={{ fontSize: '11px' }}>Time: {new Date(order.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
                 {(order.customer_name || order.customer_phone) && <div style={{ fontSize: '11px' }}>Customer: {order.customer_name || order.customer_phone}</div>}
-                {(addr.recipientMobile || order.customer_phone) && <div style={{ fontSize: '11px' }}>Mobile: {addr.recipientMobile || order.customer_phone}</div>}
+                {order.order_type === 'dine_in' ? (
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: 2 }}>🍽️ {dineInLabel}</div>
+                ) : (
+                    (addr.recipientMobile || order.customer_phone) && <div style={{ fontSize: '11px' }}>Mobile: {addr.recipientMobile || order.customer_phone}</div>
+                )}
                 {addr.recipientName && <div style={{ fontSize: '11px' }}>Name: {addr.recipientName}</div>}
                 {addr.addressLine1 && <div style={{ fontSize: '11px' }}>Address: {addr.addressLine1}{addr.addressLine2 ? ', ' + addr.addressLine2 : ''}</div>}
                 {(addr.city || addr.pincode) && <div style={{ fontSize: '11px' }}>{[addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')}</div>}

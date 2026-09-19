@@ -58,6 +58,7 @@ const OrderBill = () => {
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeLogo = storeInfo?.config?.brand?.logoUrl || null;
     const storeGST = storeInfo?.config?.cart?.gstNumber || '';
+    const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
     const storeTagline = storeInfo?.config?.brand?.tagline || '';
 
     return (
@@ -125,7 +126,12 @@ const OrderBill = () => {
                         {order.customer_phone && <div style={styles.infoSmall}>📞 {order.customer_phone}</div>}
                         {order.customer_email && <div style={styles.infoSmall}>✉ {order.customer_email}</div>}
                     </div>
-                    {addr.addressLine1 && (
+                    {order.order_type === 'dine_in' ? (
+                        <div style={{textAlign:'right'}}>
+                            <div style={styles.sectionTitle}>Order Type</div>
+                            <div style={styles.infoValue}>🍽️ {dineInLabel}</div>
+                        </div>
+                    ) : addr.addressLine1 && (
                         <div style={{textAlign:'right'}}>
                             <div style={styles.sectionTitle}>Deliver To</div>
                             <div style={styles.infoValue}>{addr.recipientName || order.customer_name}</div>
