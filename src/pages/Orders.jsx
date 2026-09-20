@@ -218,8 +218,8 @@ const Orders = () => {
                                 <tr key={order.id}>
                                     <td><strong>{order.order_id || order.id}</strong></td>
                                     <td>
-                                        <div>{order.customer_name}</div>
-                                        <div style={{fontSize:'12px',color:'#8e9eab'}}>{order.customer_email}</div>
+                                        <div>{order.customer_name || order.customer_phone || '—'}</div>
+                                        <div style={{fontSize:'12px',color:'#8e9eab'}}>{order.customer_email || order.customer_phone}</div>
                                     </td>
                                     <td>₹{Number(order.total_amount).toLocaleString()}</td>
                                     <td>{order.items ? (Array.isArray(order.items) ? order.items.length : 1) : 1}</td>
