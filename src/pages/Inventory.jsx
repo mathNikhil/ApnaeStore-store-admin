@@ -255,11 +255,12 @@ const Inventory = () => {
                                         const pReturned = sumSizes(allSizes, 'total_returned');
                                         const pCurrent = pInStock - pSold + pReturned;
                                         const pValue = allSizes.reduce((s, r) => s + parseFloat(r.total_value || 0), 0);
+                                        const pHasLowStock = allSizes.some(s => parseInt(s.current_stock || 0) < threshold);
 
                                         return (
                                             <React.Fragment key={product.product_id}>
                                                 {/* Product Row */}
-                                                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb', cursor: 'pointer' }} onClick={() => toggleProduct(product.product_id)}>
+                                                <tr style={{ background: pHasLowStock ? '#fff5f5' : '#f8fafc', borderBottom: '2px solid #e5e7eb', cursor: 'pointer' }} onClick={() => toggleProduct(product.product_id)}>
                                                     <td style={styles.td}>
                                                         {product.image_url
                                                             ? <img src={product.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
