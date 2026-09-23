@@ -300,7 +300,7 @@ const Inventory = () => {
                                                     return (
                                                         <React.Fragment key={variant.variation_id}>
                                                             {/* Variant Row */}
-                                                            <tr style={{ background: vHasLowStock ? '#fffbeb' : '#f3f4f6', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
+                                                            <tr style={{ background: vHasLowStock ? '#fff5f5' : '#f3f4f6', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
                                                                 <td style={styles.td}>
                                                                     {variant.image_url
                                                                         ? <img src={variant.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, marginLeft: 12 }} />
