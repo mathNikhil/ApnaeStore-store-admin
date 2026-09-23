@@ -259,7 +259,7 @@ const Inventory = () => {
                                         return (
                                             <React.Fragment key={product.product_id}>
                                                 {/* Product Row */}
-                                                <tr style={{ background: '#f0faf4', borderBottom: '2px solid #d1fae5', cursor: 'pointer' }} onClick={() => toggleProduct(product.product_id)}>
+                                                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb', cursor: 'pointer' }} onClick={() => toggleProduct(product.product_id)}>
                                                     <td style={styles.td}>
                                                         {product.image_url
                                                             ? <img src={product.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
@@ -300,7 +300,7 @@ const Inventory = () => {
                                                     return (
                                                         <React.Fragment key={variant.variation_id}>
                                                             {/* Variant Row */}
-                                                            <tr style={{ background: vHasLowStock ? '#fff5f5' : '#f9fafb', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
+                                                            <tr style={{ background: vHasLowStock ? '#fffbeb' : '#f3f4f6', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
                                                                 <td style={styles.td}>
                                                                     {variant.image_url
                                                                         ? <img src={variant.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, marginLeft: 12 }} />
