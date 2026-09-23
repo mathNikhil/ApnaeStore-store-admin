@@ -12,7 +12,7 @@ const Inventory = () => {
     const [summary, setSummary] = useState({ totalProducts: 0, totalItems: 0, totalValue: 0 });
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
-    const [uploadResult, setUploadResult] = useState(null);
+
     const [search, setSearch] = useState('');
     const [sortKey, setSortKey] = useState(null);
     const [sortDir, setSortDir] = useState('asc');
@@ -174,8 +174,7 @@ const Inventory = () => {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button onClick={handleSync} disabled={syncing} style={styles.btnSecondary}>{syncing ? 'Syncing...' : '🔄 Sync'}</button>
                         <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download CSV</button>
-                        <button onClick={() => fileRef.current.click()} style={styles.btnPrimary}>⬆️ Upload CSV</button>
-                        <input ref={fileRef} type="file" accept=".csv" onChange={handleUploadCSV} style={{ display: 'none' }} />
+
                     </div>
                 </div>
 
