@@ -235,6 +235,7 @@ const Inventory = () => {
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('price')}>Price <SortArrow col="price" /></th>
                                         <th style={{ ...styles.th, color: '#2563eb', cursor: 'pointer' }} onClick={() => handleSort('stock_quantity')}>InStock <SortArrow col="stock_quantity" /></th>
                                         <th style={styles.th}>Sold</th>
+                                        <th style={styles.th}>Sale Type</th>
                                         <th style={styles.th}>Returned</th>
                                         <th style={{ ...styles.th, color: '#16a34a', cursor: 'pointer' }} onClick={() => handleSort('current_stock')}>Current Stock <SortArrow col="current_stock" /></th>
                                         <th style={styles.th}>Total Value</th>
@@ -274,6 +275,7 @@ const Inventory = () => {
                                                     <td style={styles.td}>{pPriceDisplay}</td>
                                                     <td style={{ ...styles.td, color: '#2563eb', fontWeight: 600 }}>{pInStock}</td>
                                                     <td style={styles.td}>{pSold}</td>
+                                        <td style={styles.td}>—</td>
                                                     <td style={styles.td}>{pReturned}</td>
                                                     <td style={{ ...styles.td, fontWeight: 700, color: pCurrent <= 0 ? '#dc2626' : '#16a34a' }}>{pCurrent}</td>
                                                     <td style={styles.td}>₹{fmt(pValue)}</td>
@@ -314,6 +316,7 @@ const Inventory = () => {
                                                                 <td style={styles.td}>{vPriceDisplay}</td>
                                                                 <td style={{ ...styles.td, color: '#2563eb', fontWeight: 600 }}>{vInStock}</td>
                                                                 <td style={styles.td}>{vSold}</td>
+                                                                <td style={styles.td}>—</td>
                                                                 <td style={styles.td}>{vReturned}</td>
                                                                 <td style={{ ...styles.td, fontWeight: 700, color: vCurrent <= 0 ? '#dc2626' : '#16a34a' }}>{vCurrent}</td>
                                                                 <td style={styles.td}>₹{fmt(vValue)}</td>
@@ -349,6 +352,10 @@ const Inventory = () => {
                                                                             )}
                                                                         </td>
                                                                         <td style={styles.td}>{item.total_sold}</td>
+                                                                        <td style={styles.td}>
+                                                                            {item.instore_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#92400e', marginRight: 4 }}>🍽️ {item.instore_sold}</span>}
+                                                                            {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#dbeafe', color: '#1e40af' }}>🚚 {item.online_sold}</span>}
+                                                                        </td>
                                                                         <td style={styles.td}>{item.total_returned}</td>
                                                                         <td style={styles.td}>
                                                                             <span style={{ fontWeight: 700, color: isOut ? '#dc2626' : isLow ? '#d97706' : '#16a34a' }}>
