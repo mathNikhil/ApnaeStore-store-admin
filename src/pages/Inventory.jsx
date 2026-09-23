@@ -24,7 +24,6 @@ const Inventory = () => {
     const [thresholdInput, setThresholdInput] = useState(10);
     const [savingThreshold, setSavingThreshold] = useState(false);
     const [dineInLabel, setDineInLabel] = useState('Dine In');
-    const fileRef = useRef();
 
     useEffect(() => {
         fetchInventory();
@@ -122,7 +121,6 @@ const Inventory = () => {
             setUploadResult(data);
             await fetchInventory();
         } catch (e) { console.error(e); }
-        fileRef.current.value = '';
     };
 
     // Group inventory
@@ -179,13 +177,6 @@ const Inventory = () => {
                 </div>
 
                 {/* Upload Result */}
-                {uploadResult && (
-                    <div style={{ background: uploadResult.errors?.length ? '#fff8f0' : '#f0fff4', border: `1px solid ${uploadResult.errors?.length ? '#f59e0b' : '#22c55e'}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                        <p style={{ margin: 0, fontWeight: 600 }}>✅ {uploadResult.updated} rows updated, {uploadResult.skipped} skipped</p>
-                        {uploadResult.errors?.map((e, i) => <p key={i} style={{ margin: '4px 0 0', color: '#dc2626', fontSize: 13 }}>⚠️ {e}</p>)}
-                        <button onClick={() => setUploadResult(null)} style={{ ...styles.btnSecondary, marginTop: 8, fontSize: 12, padding: '4px 12px' }}>Dismiss</button>
-                    </div>
-                )}
 
                 {/* Summary Cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 16 }}>
