@@ -34,7 +34,7 @@ const OrderDetail = () => {
             setLoading(false);
         }
         // Fetch dineInLabel
-        const subdomain = localStorage.getItem('currentSubdomain') || localStorage.getItem('currentStoreName');
+        const subdomain = localStorage.getItem('currentStoreSubdomain') || localStorage.getItem('currentStoreName');
         if (subdomain) {
             fetch(`${import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com'}/api/public/store/${subdomain}`)
                 .then(r => r.json())

@@ -30,7 +30,7 @@ const Inventory = () => {
         fetchInventory();
         fetchThreshold();
         // Fetch store config for dineInLabel
-        const subdomain = localStorage.getItem('currentSubdomain') || localStorage.getItem('currentStoreName');
+        const subdomain = localStorage.getItem('currentStoreSubdomain') || localStorage.getItem('currentStoreName');
         if (subdomain) {
             fetch(`${API}/api/public/store/${subdomain}`)
                 .then(r => r.json())
