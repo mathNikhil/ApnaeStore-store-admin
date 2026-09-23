@@ -15,6 +15,7 @@ const OrderDetail = () => {
     const [courierName, setCourierName] = useState('');
     const [trackingNumber, setTrackingNumber] = useState('');
     const [courierNotes, setCourierNotes] = useState('');
+    const [dineInLabel, setDineInLabel] = useState('Dine In');
     const [savingTracking, setSavingTracking] = useState(false);
     const [refreshingTracking, setRefreshingTracking] = useState(false);
     const [myCouriers, setMyCouriers] = useState([]);
@@ -31,6 +32,14 @@ const OrderDetail = () => {
             fetchOrderDetail(storedStoreId);
         } else {
             setLoading(false);
+        }
+        // Fetch dineInLabel
+        const subdomain = localStorage.getItem('currentSubdomain') || localStorage.getItem('currentStoreName');
+        if (subdomain) {
+            fetch(`${import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com'}/api/public/store/${subdomain}`)
+                .then(r => r.json())
+                .then(d => { if (d?.success) setDineInLabel(d.data?.config?.cart?.dineInLabel || 'Dine In'); })
+                .catch(() => {});
         }
     }, [id]);
 
@@ -183,7 +192,7 @@ const OrderDetail = () => {
                         <h1 style={{marginTop:'8px'}}>Order #{order.order_id || order.id}
                             {order.order_type === 'dine_in' && (
                                 <span style={{marginLeft:12, fontSize:13, background:'#f59e0b', color:'#fff', padding:'2px 10px', borderRadius:20, fontWeight:600, verticalAlign:'middle'}}>
-                                    🍽️ DINE IN
+                                    🍽️ {dineInLabel}
                                 </span>
                             )}
                         </h1>
@@ -353,7 +362,7 @@ const OrderDetail = () => {
                         <div style={styles.infoRow}><strong>Date:</strong> {new Date(order.created_at).toLocaleString()}</div>
                         <div style={styles.infoRow}><strong>Total:</strong> ₹{Number(order.total_amount).toLocaleString()}</div>
                         <div style={styles.infoRow}><strong>Payment Method:</strong> {order.payment_method === 'upi' ? 'UPI' : (order.payment_method || '—')}</div>
-                        <div style={styles.infoRow}><strong>Order Type:</strong> {order.order_type === 'dine_in' ? '🍽️ Dine In' : '🚚 Delivery'}</div>
+                        <div style={styles.infoRow}><strong>Order Type:</strong> {order.order_type === 'dine_in' ? dineInLabel : '🚚 Delivery'}</div>
                         <div style={styles.infoRow}><strong>Payment:</strong> {order.payment_status || 'Pending'}</div>
                         <div style={styles.infoRow}><strong>Items:</strong> {order.items ? (Array.isArray(order.items) ? order.items.length : 1) : 1}</div>
 

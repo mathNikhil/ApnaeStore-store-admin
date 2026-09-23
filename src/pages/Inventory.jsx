@@ -23,11 +23,20 @@ const Inventory = () => {
     const [threshold, setThreshold] = useState(10);
     const [thresholdInput, setThresholdInput] = useState(10);
     const [savingThreshold, setSavingThreshold] = useState(false);
+    const [dineInLabel, setDineInLabel] = useState('Dine In');
     const fileRef = useRef();
 
     useEffect(() => {
         fetchInventory();
         fetchThreshold();
+        // Fetch store config for dineInLabel
+        const subdomain = localStorage.getItem('currentSubdomain') || localStorage.getItem('currentStoreName');
+        if (subdomain) {
+            fetch(`${API}/api/public/store/${subdomain}`)
+                .then(r => r.json())
+                .then(d => { if (d?.success) setDineInLabel(d.data?.config?.cart?.dineInLabel || 'Dine In'); })
+                .catch(() => {});
+        }
     }, []);
 
     const fetchThreshold = async () => {
@@ -353,8 +362,8 @@ const Inventory = () => {
                                                                         </td>
                                                                         <td style={styles.td}>{item.total_sold}</td>
                                                                         <td style={styles.td}>
-                                                                            {item.instore_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#92400e', marginRight: 4 }}>🍽️ {item.instore_sold}</span>}
-                                                                            {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#dbeafe', color: '#1e40af' }}>🚚 {item.online_sold}</span>}
+                                                                            {item.instore_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#92400e', marginRight: 4 }}>{dineInLabel}: {item.instore_sold}</span>}
+                                                                            {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#dbeafe', color: '#1e40af' }}>Delivery: {item.online_sold}</span>}
                                                                         </td>
                                                                         <td style={styles.td}>{item.total_returned}</td>
                                                                         <td style={styles.td}>
