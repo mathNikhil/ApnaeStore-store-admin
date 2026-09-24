@@ -61,6 +61,45 @@ const OrderBill = () => {
     const hsnCode = storeInfo?.config?.cart?.hsnCode || '';
     const storeState = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
+    const storePAN = storeInfo?.config?.cart?.panNumber || storeInfo?.config?.profile?.panNumber || '';
+    const storeFullAddress = storeInfo?.config?.profile?.storeAddress || '';
+
+    // Invoice number — sequential from order_id last 8 chars
+    const invoiceNumber = `INV-${(order.order_id || order.id || '').slice(-10).toUpperCase()}`;
+
+    // Amount in words
+    const amountInWords = (num) => {
+        const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+        const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+        if (num === 0) return 'Zero';
+        const convert = (n) => {
+            if (n < 20) return ones[n];
+            if (n < 100) return tens[Math.floor(n/10)] + (n%10 ? ' ' + ones[n%10] : '');
+            if (n < 1000) return ones[Math.floor(n/100)] + ' Hundred' + (n%100 ? ' ' + convert(n%100) : '');
+            if (n < 100000) return convert(Math.floor(n/1000)) + ' Thousand' + (n%1000 ? ' ' + convert(n%1000) : '');
+            if (n < 10000000) return convert(Math.floor(n/100000)) + ' Lakh' + (n%100000 ? ' ' + convert(n%100000) : '');
+            return convert(Math.floor(n/10000000)) + ' Crore' + (n%10000000 ? ' ' + convert(n%10000000) : '');
+        };
+        const rupees = Math.floor(num);
+        const paise = Math.round((num - rupees) * 100);
+        return convert(rupees) + ' Rupees' + (paise ? ' and ' + convert(paise) + ' Paise' : '') + ' Only';
+    };
+
+    // Get size label from store config
+    const getSizeLabel = (sizeId, variationId) => {
+        const cats = storeInfo?.config?.products?.categories || [];
+        for (const cat of cats) {
+            for (const prod of cat.products || []) {
+                for (const v of prod.variations || []) {
+                    if (String(v.id) === String(variationId)) {
+                        const sz = (v.sizes || []).find(s => String(s.id) === String(sizeId));
+                        if (sz) return `${v.name}${sz.size ? ' / ' + sz.size + (sz.unit ? sz.unit : '') : ''}`;
+                    }
+                }
+            }
+        }
+        return '—';
+    };
     const gstRate = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
     const cgstRate = gstRate / 2;
     const sgstRate = gstRate / 2;
@@ -88,19 +127,22 @@ const OrderBill = () => {
                     {storePhone && <div style={styles.storeDetail}>📞 {storePhone}</div>}
                     {storeEmail && <div style={styles.storeDetail}>✉ {storeEmail}</div>}
                     {storeGST && <div style={styles.storeDetail}>GSTIN: {storeGST}</div>}
+                    {storePAN && <div style={styles.storeDetail}>PAN: {storePAN}</div>}
                 </div>
 
                 <div style={styles.divider} />
 
                 {/* Bill title */}
                 <div style={styles.billTitle}>TAX INVOICE</div>
+                <div style={{textAlign:'center', fontSize:11, color:'#556067', marginBottom:4}}>Original for Recipient</div>
                 {!storeGST && <div style={{textAlign:'center', fontSize:11, color:'#e74c3c', marginBottom:8}}>⚠️ GSTIN not configured — add it in Step 3 (Cart Settings)</div>}
 
                 {/* Order info */}
                 <div style={styles.infoGrid}>
                     <div>
-                        <div style={styles.infoLabel}>Order ID</div>
-                        <div style={styles.infoValue}>#{order.order_id || order.id}</div>
+                        <div style={styles.infoLabel}>Invoice No.</div>
+                        <div style={styles.infoValue}>{invoiceNumber}</div>
+                        <div style={{fontSize:11, color:'#888', marginTop:2}}>Order: #{(order.order_id || order.id || '').slice(-8)}</div>
                     </div>
                     <div style={{textAlign:'right'}}>
                         <div style={styles.infoLabel}>Order Date</div>
@@ -189,7 +231,7 @@ const OrderBill = () => {
                             </td>
                                 <td style={{...styles.td, textAlign:'center', fontSize:12, color:'#666'}}>{hsnCode || '—'}</td>
                                 <td style={{...styles.td, textAlign:'center', fontSize:12, color:'#666'}}>
-                                    {item.variant || item.size || item.color || '—'}
+                                    {storeInfo ? getSizeLabel(item.sizeId, item.variationId) : (item.variant || item.size || '—')}
                                 </td>
                                 <td style={{...styles.td, textAlign:'right', fontSize:12}}>
                                     ₹{enableGST && gstRate > 0
@@ -261,6 +303,21 @@ const OrderBill = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Amount in words */}
+                <div style={{fontSize:12, color:'#556067', marginTop:8, fontStyle:'italic', borderTop:'1px dashed #e0e3e6', paddingTop:8}}>
+                    <strong>Amount in Words:</strong> {amountInWords(Number(order.total_amount || 0))}
+                </div>
+
+                {/* Authorized signatory */}
+                <div style={{display:'flex', justifyContent:'flex-end', marginTop:24, paddingTop:16}}>
+                    <div style={{textAlign:'center'}}>
+                        <div style={{borderTop:'1px solid #556067', paddingTop:4, fontSize:11, color:'#556067', width:160}}>
+                            Authorized Signatory
+                        </div>
+                        <div style={{fontSize:11, color:'#556067', marginTop:2}}>{storeName}</div>
+                    </div>
+                </div>
 
                 {/* Footer */}
                 <div style={styles.divider} />
