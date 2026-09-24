@@ -154,12 +154,14 @@ const Orders = () => {
                     </div>
                     <button style={styles.exportBtn} onClick={() => {
                         const rows = [
-                            ['Order ID', 'Date', 'Customer', 'Phone', 'Amount', 'Items', 'Status', 'Payment Method', 'Payment Status'],
+                            ['Order ID', 'Date', 'Customer', 'Phone', 'Order Type', 'Items Detail', 'Amount', 'Items Count', 'Status', 'Payment Method', 'Payment Status'],
                             ...orders.map(o => [
                                 o.order_id,
                                 new Date(o.created_at).toLocaleString(),
                                 o.customer_name || '',
                                 o.customer_phone || '',
+                                o.order_type || '',
+                                o.items && Array.isArray(o.items) ? o.items.map(i => [i.product_name || i.name, i.variation_name, i.size_label || i.size, i.quantity > 1 ? 'x'+i.quantity : '', i.price ? '₹'+i.price : ''].filter(Boolean).join(' ')).join(' | ') : '',
                                 o.total_amount,
                                 o.items ? (Array.isArray(o.items) ? o.items.length : 1) : 1,
                                 o.status,
@@ -206,8 +208,9 @@ const Orders = () => {
                             <tr>
                                 <th>Order ID</th>
                                 <th>Customer</th>
+                                <th>Order Type</th>
+                                <th>Items Detail</th>
                                 <th>Amount</th>
-                                <th>Items</th>
                                 <th>Status</th>
                                 <th>Date</th>
                                 <th>Actions</th>
@@ -221,8 +224,37 @@ const Orders = () => {
                                         <div>{order.customer_name || order.customer_phone || '—'}</div>
                                         <div style={{fontSize:'12px',color:'#8e9eab'}}>{order.customer_email || order.customer_phone}</div>
                                     </td>
+                                    <td>
+                                        {order.order_type ? (
+                                            <span style={{
+                                                padding:'3px 8px',
+                                                borderRadius:'12px',
+                                                fontSize:'11px',
+                                                fontWeight:'600',
+                                                background: order.order_type === 'dine_in' ? '#fff3e0' : order.order_type === 'takeaway' ? '#e8f5e9' : '#e3f2fd',
+                                                color: order.order_type === 'dine_in' ? '#e65100' : order.order_type === 'takeaway' ? '#2e7d32' : '#1565c0'
+                                            }}>
+                                                {order.order_type === 'dine_in' ? '🍽️ Dine In' : order.order_type === 'takeaway' ? '🥡 Takeaway' : '🚚 Delivery'}
+                                            </span>
+                                        ) : '—'}
+                                    </td>
+                                    <td style={{maxWidth:'220px'}}>
+                                        {order.items && Array.isArray(order.items) ? (
+                                            <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
+                                                {order.items.map((item, idx) => (
+                                                    <div key={idx} style={{fontSize:'12px',borderBottom: idx < order.items.length-1 ? '1px solid #f0f0f0':'none',paddingBottom:'3px'}}>
+                                                        <div style={{fontWeight:'600',color:'#2d3436'}}>{item.product_name || item.name || '—'}</div>
+                                                        <div style={{color:'#8e9eab'}}>
+                                                            {[item.variation_name, item.size_label || item.size].filter(Boolean).join(' / ')}
+                                                            {item.quantity > 1 ? ` × ${item.quantity}` : ''}
+                                                            {item.price ? ` — ₹${Number(item.price).toLocaleString()}` : ''}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : '—'}
+                                    </td>
                                     <td>₹{Number(order.total_amount).toLocaleString()}</td>
-                                    <td>{order.items ? (Array.isArray(order.items) ? order.items.length : 1) : 1}</td>
                                     <td><span className={getStatusClass(order.status)}>{getStatusLabel(order.status)}</span></td>
                                     <td style={{fontSize:'13px'}}>{new Date(order.created_at).toLocaleString()}</td>
                                     <td>

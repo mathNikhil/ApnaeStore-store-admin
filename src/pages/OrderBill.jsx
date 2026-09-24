@@ -58,6 +58,12 @@ const OrderBill = () => {
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeLogo = storeInfo?.config?.brand?.logoUrl || null;
     const storeGST = storeInfo?.config?.cart?.gstNumber || '';
+    const hsnCode = storeInfo?.config?.cart?.hsnCode || '';
+    const storeState = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';
+    const enableGST = storeInfo?.config?.cart?.enableGST || false;
+    const gstRate = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
+    const cgstRate = gstRate / 2;
+    const sgstRate = gstRate / 2;
     const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
     const storeTagline = storeInfo?.config?.brand?.tagline || '';
 
@@ -87,7 +93,8 @@ const OrderBill = () => {
                 <div style={styles.divider} />
 
                 {/* Bill title */}
-                <div style={styles.billTitle}>ORDER INVOICE</div>
+                <div style={styles.billTitle}>TAX INVOICE</div>
+                {!storeGST && <div style={{textAlign:'center', fontSize:11, color:'#e74c3c', marginBottom:8}}>⚠️ GSTIN not configured — add it in Step 3 (Cart Settings)</div>}
 
                 {/* Order info */}
                 <div style={styles.infoGrid}>
@@ -113,6 +120,14 @@ const OrderBill = () => {
                         <div style={{...styles.infoValue, textTransform:'uppercase', fontWeight:700}}>
                             {(order.status || '').replace(/_/g, ' ')}
                         </div>
+                    </div>
+                    <div>
+                        <div style={styles.infoLabel}>Place of Supply</div>
+                        <div style={styles.infoValue}>{storeState || 'N/A'}</div>
+                    </div>
+                    <div style={{textAlign:'right'}}>
+                        <div style={styles.infoLabel}>Reverse Charge</div>
+                        <div style={styles.infoValue}>No</div>
                     </div>
                 </div>
 
@@ -151,7 +166,9 @@ const OrderBill = () => {
                     <thead>
                         <tr style={styles.tableHead}>
                             <th style={{...styles.th, textAlign:'left', width:'40%'}}>Item</th>
+                            <th style={{...styles.th, textAlign:'center'}}>HSN/SAC</th>
                             <th style={{...styles.th, textAlign:'center'}}>Variant</th>
+                            <th style={{...styles.th, textAlign:'right'}}>Taxable Value</th>
                             <th style={{...styles.th, textAlign:'center'}}>Qty</th>
                             <th style={{...styles.th, textAlign:'right'}}>Price</th>
                             <th style={{...styles.th, textAlign:'right'}}>Subtotal</th>
@@ -170,8 +187,14 @@ const OrderBill = () => {
                                     <span>{item.name || item.product_name || 'Item'}</span>
                                 </div>
                             </td>
+                                <td style={{...styles.td, textAlign:'center', fontSize:12, color:'#666'}}>{hsnCode || '—'}</td>
                                 <td style={{...styles.td, textAlign:'center', fontSize:12, color:'#666'}}>
                                     {item.variant || item.size || item.color || '—'}
+                                </td>
+                                <td style={{...styles.td, textAlign:'right', fontSize:12}}>
+                                    ₹{enableGST && gstRate > 0
+                                        ? (Number((item.price || 0) * (item.quantity || 1)) / (1 + gstRate/100)).toFixed(2)
+                                        : Number((item.price || 0) * (item.quantity || 1)).toFixed(2)}
                                 </td>
                                 <td style={{...styles.td, textAlign:'center'}}>{item.quantity || item.qty || 1}</td>
                                 <td style={{...styles.td, textAlign:'right'}}>₹{Number(item.price || item.unit_price || 0).toLocaleString('en-IN')}</td>
@@ -187,11 +210,21 @@ const OrderBill = () => {
 
                 {/* Totals */}
                 <div style={styles.totalsWrap}>
-                    {order.tax_amount > 0 && (
-                        <div style={styles.totalRow}>
-                            <span>GST{storeGST ? <span style={{fontSize:'11px',color:'#999',marginLeft:'6px'}}>GSTIN: {storeGST}</span> : ''}</span>
-                            <span>₹{Number(order.tax_amount).toLocaleString('en-IN')}</span>
-                        </div>
+                    {enableGST && order.tax_amount > 0 && (
+                        <>
+                            <div style={styles.totalRow}>
+                                <span>Taxable Amount</span>
+                                <span>₹{(Number(order.total_amount) / (1 + gstRate/100)).toFixed(2)}</span>
+                            </div>
+                            <div style={styles.totalRow}>
+                                <span>CGST @ {cgstRate}%</span>
+                                <span>₹{(Number(order.tax_amount) / 2).toFixed(2)}</span>
+                            </div>
+                            <div style={styles.totalRow}>
+                                <span>SGST @ {sgstRate}%</span>
+                                <span>₹{(Number(order.tax_amount) / 2).toFixed(2)}</span>
+                            </div>
+                        </>
                     )}
                     {order.delivery_charge > 0 && (
                         <div style={styles.totalRow}>
