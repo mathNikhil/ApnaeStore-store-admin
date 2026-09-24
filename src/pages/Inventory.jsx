@@ -95,6 +95,19 @@ const Inventory = () => {
         } catch (e) {}
     };
 
+    const handleDownloadTallyCSV = async () => {
+        try {
+            const res = await fetch(`${API}/api/store/${storeId}/inventory/download-tally-csv`, { headers: hdrs });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tally-inventory-${storeId}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) { alert('Download failed'); }
+    };
+
     const handleDownloadCSV = async () => {
         try {
             const res = await fetch(`${API}/api/store/${storeId}/inventory/download-csv`, { headers: hdrs });
@@ -172,6 +185,7 @@ const Inventory = () => {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button onClick={handleSync} disabled={syncing} style={styles.btnSecondary}>{syncing ? 'Syncing...' : '🔄 Sync'}</button>
                         <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download CSV</button>
+                        <button onClick={handleDownloadTallyCSV} style={{...styles.btnSecondary, borderColor:'#0066cc', color:'#0066cc'}}>📊 Download for Tally</button>
 
                     </div>
                 </div>
