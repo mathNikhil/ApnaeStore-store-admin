@@ -9,7 +9,7 @@ const TrackingStatusBadge = ({ status }) => {
         },
         in_transit: {
             label: 'In Transit',
-            className: 'bg-blue-100 text-blue-700',
+            className: 'bg-green-100 text-green-700',
             icon: 'local_shipping'
         },
         out_for_delivery: {

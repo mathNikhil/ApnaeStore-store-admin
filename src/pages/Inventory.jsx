@@ -246,7 +246,7 @@ const Inventory = () => {
                                         <th style={styles.th}>Variant</th>
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('size_label')}>Size <SortArrow col="size_label" /></th>
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('price')}>Price <SortArrow col="price" /></th>
-                                        <th style={{ ...styles.th, color: '#2563eb', cursor: 'pointer' }} onClick={() => handleSort('stock_quantity')}>InStock <SortArrow col="stock_quantity" /></th>
+                                        <th style={{ ...styles.th, color: '#006d2f', cursor: 'pointer' }} onClick={() => handleSort('stock_quantity')}>InStock <SortArrow col="stock_quantity" /></th>
                                         <th style={styles.th}>Sold</th>
                                         <th style={styles.th}>Sale Type</th>
                                         <th style={styles.th}>Returned</th>
@@ -287,7 +287,7 @@ const Inventory = () => {
                                                     <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{variantCount} variants</td>
                                                     <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{sizeCount} sizes</td>
                                                     <td style={styles.td}>{pPriceDisplay}</td>
-                                                    <td style={{ ...styles.td, color: '#2563eb', fontWeight: 600 }}>{pInStock}</td>
+                                                    <td style={{ ...styles.td, color: '#006d2f', fontWeight: 600 }}>{pInStock}</td>
                                                     <td style={styles.td}>{pSold}</td>
                                         <td style={styles.td}>—</td>
                                                     <td style={styles.td}>{pReturned}</td>
@@ -328,7 +328,7 @@ const Inventory = () => {
                                                                 </td>
                                                                 <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{vSizeCount} sizes</td>
                                                                 <td style={styles.td}>{vPriceDisplay}</td>
-                                                                <td style={{ ...styles.td, color: '#2563eb', fontWeight: 600 }}>{vInStock}</td>
+                                                                <td style={{ ...styles.td, color: '#006d2f', fontWeight: 600 }}>{vInStock}</td>
                                                                 <td style={styles.td}>{vSold}</td>
                                                                 <td style={styles.td}>—</td>
                                                                 <td style={styles.td}>{vReturned}</td>
@@ -352,7 +352,7 @@ const Inventory = () => {
                                                                             {editingId === item.id ? (
                                                                                 <div style={{ display: 'flex', gap: 4 }}>
                                                                                     <input type="number" value={editValue} onChange={e => setEditValue(e.target.value)}
-                                                                                        style={{ width: 60, border: '2px solid #2563eb', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
+                                                                                        style={{ width: 60, border: '2px solid #006d2f', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
                                                                                         min="0" autoFocus
                                                                                         onKeyDown={e => { if (e.key === 'Enter') handleUpdateStock(item.id, editValue); if (e.key === 'Escape') setEditingId(null); }} />
                                                                                     <button onClick={() => handleUpdateStock(item.id, editValue)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✓</button>
@@ -360,7 +360,7 @@ const Inventory = () => {
                                                                                 </div>
                                                                             ) : (
                                                                                 <span onClick={() => { setEditingId(item.id); setEditValue(item.stock_quantity); }}
-                                                                                    style={{ background: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
+                                                                                    style={{ background: '#f0faf4', color: '#006d2f', padding: '4px 10px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
                                                                                     {item.stock_quantity} ✏️
                                                                                 </span>
                                                                             )}
@@ -368,7 +368,7 @@ const Inventory = () => {
                                                                         <td style={styles.td}>{item.total_sold}</td>
                                                                         <td style={styles.td}>
                                                                             {item.instore_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#92400e', marginRight: 4 }}>{dineInLabel}: {item.instore_sold}</span>}
-                                                                            {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#dbeafe', color: '#1e40af' }}>Delivery: {item.online_sold}</span>}
+                                                                            {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#e8f5e9', color: '#005a27' }}>Delivery: {item.online_sold}</span>}
                                                                         </td>
                                                                         <td style={styles.td}>{item.total_returned}</td>
                                                                         <td style={styles.td}>
@@ -399,7 +399,7 @@ const Inventory = () => {
 const styles = {
     th: { padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
     td: { padding: '10px 16px', verticalAlign: 'middle' },
-    btnPrimary: { background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14 },
+    btnPrimary: { background: '#006d2f', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14 },
     btnSecondary: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 500, fontSize: 14 },
 };
 
