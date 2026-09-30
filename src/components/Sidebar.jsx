@@ -139,7 +139,7 @@ const Sidebar = ({ onToggle }) => {
 };
 
 const styles = {
-    sidebar: { width: '260px', background: 'linear-gradient(180deg, #004d1f 0%, #006d2f 100%)', color: '#fff', padding: '20px 0', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column' },
+    sidebar: { width: '260px', background: '#006d2f', color: '#fff', padding: '20px 0', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column' },
     logo: { padding: '0 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' },
     subtitle: { fontSize: '11px', color: '#8e9eab', marginTop: '4px', letterSpacing: '1.5px', textTransform: 'uppercase' },
     storeBanner: { padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.08)' },
