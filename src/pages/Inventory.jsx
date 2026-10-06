@@ -185,7 +185,7 @@ const Inventory = () => {
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button onClick={handleSync} disabled={syncing} style={styles.btnSecondary}>{syncing ? 'Syncing...' : '🔄 Sync'}</button>
-                        <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download CSV</button>
+                        <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download XLSX</button>
                         <button onClick={handleDownloadTallyCSV} style={{...styles.btnSecondary, borderColor:'#0066cc', color:'#0066cc'}}>📊 Download for Tally</button>
 
                     </div>
