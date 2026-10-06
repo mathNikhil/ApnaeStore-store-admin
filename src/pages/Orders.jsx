@@ -207,6 +207,7 @@ const Orders = () => {
                         <thead>
                             <tr>
                                 <th>Order ID</th>
+                                <th>Store Address</th>
                                 <th>Customer</th>
                                 <th>Order Type</th>
                                 <th>Items Detail</th>
@@ -220,6 +221,13 @@ const Orders = () => {
                             {filteredOrders.map(order => (
                                 <tr key={order.id}>
                                     <td><strong>{order.order_id || order.id}</strong></td>
+                                    <td>
+                                        {order.branch_name ? (
+                                            <span style={{fontSize:'12px',padding:'2px 8px',borderRadius:'10px',background:'#e8f5e9',color:'#006d2f',fontWeight:600}}>
+                                                {order.branch_name}
+                                            </span>
+                                        ) : <span style={{color:'#8e9eab',fontSize:'12px'}}>Main Store</span>}
+                                    </td>
                                     <td>
                                         <div>{order.customer_name || order.customer_phone || '—'}</div>
                                         <div style={{fontSize:'12px',color:'#8e9eab'}}>{order.customer_email || order.customer_phone}</div>
