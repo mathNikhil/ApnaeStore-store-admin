@@ -140,12 +140,13 @@ const Inventory = () => {
     const grouped = {};
     inventory.forEach(item => {
         if (!grouped[item.product_id]) {
-            grouped[item.product_id] = { product_id: item.product_id, product_name: item.product_name, image_url: item.image_url, variants: {} };
+            grouped[item.product_id] = { product_id: item.product_id, product_name: item.product_name, image_url: item.image_url, is_archived: item.is_archived, variants: {} };
         }
         if (!grouped[item.product_id].variants[item.variation_id]) {
             grouped[item.product_id].variants[item.variation_id] = { variation_id: item.variation_id, variation_name: item.variation_name, image_url: item.image_url, sizes: [] };
         }
         grouped[item.product_id].variants[item.variation_id].sizes.push(item);
+        if (!item.is_archived) grouped[item.product_id].is_archived = false;
     });
 
     // Aggregate helpers
@@ -270,11 +271,12 @@ const Inventory = () => {
                                         const pCurrent = pInStock - pSold + pReturned;
                                         const pValue = allSizes.reduce((s, r) => s + parseFloat(r.total_value || 0), 0);
                                         const pHasLowStock = allSizes.some(s => parseInt(s.current_stock || 0) < threshold);
+                                        const pIsArchived = allSizes.every(s => s.is_archived);
 
                                         return (
                                             <React.Fragment key={product.product_id}>
                                                 {/* Product Row */}
-                                                <tr style={{ background: pHasLowStock ? '#fff5f5' : '#f8fafc', borderBottom: '2px solid #e5e7eb', cursor: 'pointer' }} onClick={() => toggleProduct(product.product_id)}>
+                                                <tr style={{ background: pIsArchived ? '#f3f4f6' : pHasLowStock ? '#fff5f5' : '#f8fafc', borderBottom: '2px solid #e5e7eb', cursor: 'pointer', opacity: pIsArchived ? 0.5 : 1 }} onClick={() => toggleProduct(product.product_id)}>
                                                     <td style={styles.td}>
                                                         {product.image_url
                                                             ? <img src={product.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
@@ -282,7 +284,7 @@ const Inventory = () => {
                                                     </td>
                                                     <td style={{ ...styles.td, fontWeight: 700, color: '#006d2f' }}>
                                                         <span style={{ marginRight: 8 }}>{isProductExpanded ? '▼' : '▶'}</span>
-                                                        {product.product_name}
+                                                        {product.product_name}{pIsArchived && <span style={{ marginLeft: 8, fontSize: 10, background: '#e5e7eb', color: '#6b7280', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>ARCHIVED</span>}
                                                     </td>
                                                     <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{variantCount} variants</td>
                                                     <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{sizeCount} sizes</td>
@@ -342,7 +344,7 @@ const Inventory = () => {
                                                                 const isOut = currentStock <= 0;
                                                                 const isLow = currentStock > 0 && currentStock < threshold;
                                                                 return (
-                                                                    <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff' }}>
+                                                                    <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.5 : 1 }}>
                                                                         <td style={styles.td}></td>
                                                                         <td style={styles.td}></td>
                                                                         <td style={{ ...styles.td, paddingLeft: 40, color: '#556067', fontSize: 13 }}>{variant.variation_name}</td>

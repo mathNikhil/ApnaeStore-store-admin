@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { storeAdminAuthAPI, storeAdminAPI } from '../services/api';
 
-// Inject responsive styles once
 if (!document.getElementById('store-admin-responsive')) {
     const style = document.createElement('style');
     style.id = 'store-admin-responsive';
@@ -35,28 +34,20 @@ const Sidebar = ({ onToggle }) => {
         if (!storeId) return;
         storeAdminAPI.getOrderStats(storeId)
             .then((result) => {
-                if (result.success) {
-                    setPendingCount(parseInt(result.data.total_orders, 10) || 0);
-                }
+                if (result.success) setPendingCount(parseInt(result.data.total_orders, 10) || 0);
             })
             .catch((err) => console.error('Failed to load order count:', err));
     }, []);
 
     const handleLogout = async () => {
         if (!window.confirm('Are you sure you want to logout?')) return;
-
-        // ✅ FIX: must tell the backend, not just clear local state —
-        // otherwise this session stays "active" server-side for up to the
-        // full 3-hour idle timeout, blocking anyone else (staff or tenant)
-        // from logging in until it expires on its own.
         const storeId = localStorage.getItem('currentStoreId');
         const subdomain = localStorage.getItem('currentStoreSubdomain');
         try {
             if (storeId) await storeAdminAuthAPI.logout(storeId);
         } catch (e) {
-            console.error('Logout request failed (continuing to clear local session anyway):', e);
+            console.error('Logout request failed:', e);
         }
-
         localStorage.removeItem('storeAdminToken');
         localStorage.removeItem('storeAdminUser');
         localStorage.removeItem('currentStoreId');
@@ -65,9 +56,18 @@ const Sidebar = ({ onToggle }) => {
         navigate(subdomain ? `/login?store=${subdomain}` : '/login');
     };
 
-    const isActive = (path) => location.pathname === path ? 'active' : '';
+    const isActive = (path) => location.pathname === path;
 
-    // Inject hamburger into body to avoid transform stacking context issue
+    const navItems = [
+        { path: '/dashboard', icon: '⊞', label: 'Dashboard' },
+        { path: '/orders', icon: '📋', label: 'Orders', badge: pendingCount > 0 ? pendingCount : null },
+        { path: '/customers', icon: '👤', label: 'Customers' },
+        { path: '/inventory', icon: '📦', label: 'Inventory' },
+        { path: '/couriers', icon: '🚚', label: 'Couriers' },
+        { path: '/reports', icon: '📈', label: 'Reports' },
+        { path: '/staff', icon: '👥', label: 'Staff' },
+    ];
+
     React.useEffect(() => {
         if (!isMobile) return;
         let btn = document.getElementById('mobile-hamburger');
@@ -93,64 +93,87 @@ const Sidebar = ({ onToggle }) => {
 
     return (
         <>
-        {/* Overlay */}
         {isMobile && isMobileOpen && (
             <div onClick={toggleMobile} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }} />
         )}
         <div style={{ ...styles.sidebar, transform: isMobile ? (isMobileOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)', transition: 'transform 0.25s ease', zIndex: 1000 }}>
-            <div style={styles.logo}>
-                <h2>📊 Store<span style={{color:'#a8e6c1'}}>Admin</span></h2>
-                <div style={styles.subtitle}>Order Management</div>
+
+            {/* Logo */}
+            <div style={styles.logoArea}>
+                <div style={styles.logoBox}>
+                    <div style={styles.logoIcon}>S</div>
+                    <div>
+                        <div style={styles.logoText}>Store<span style={{color:'#4ade80'}}>Admin</span></div>
+                        <div style={styles.logoSub}>ORDER MANAGEMENT</div>
+                    </div>
+                </div>
             </div>
+
+            {/* Store banner */}
             {storeName && (
                 <div style={styles.storeBanner}>
                     <div style={styles.storeLabel}>MANAGING</div>
                     <div style={styles.storeName} title={storeName}>{storeName}</div>
                 </div>
             )}
+
+            {/* Nav */}
             <nav style={styles.nav}>
-                <Link to="/dashboard" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/dashboard')]}}>
-                    <span style={styles.icon}>📊</span><span>Dashboard</span>
-                </Link>
-                <Link to="/orders" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/orders')]}}>
-                    <span style={styles.icon}>📋</span><span>Orders</span>
-                    {pendingCount > 0 && <span style={styles.badge}>{pendingCount}</span>}
-                </Link>
-                <Link to="/customers" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/customers')]}}>
-                    <span style={styles.icon}>👤</span><span>Customers</span>
-                </Link>
-                <Link to="/inventory" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/inventory')]}}>
-                    <span style={styles.icon}>📦</span><span>Inventory</span>
-                </Link>
-                <Link to="/couriers" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/couriers')]}}>
-                    <span style={styles.icon}>🚚</span><span>Couriers</span>
-                </Link>
-                <Link to="/reports" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/reports')]}}>
-                    <span style={styles.icon}>📈</span><span>Reports</span>
-                </Link>
-                <Link to="/staff" onClick={() => isMobile && setIsMobileOpen(false)} style={{...styles.navLink, ...styles[isActive('/staff')]}}>
-                    <span style={styles.icon}>👥</span><span>Staff</span>
-                </Link>
+                {navItems.map(item => (
+                    <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => isMobile && setIsMobileOpen(false)}
+                        style={{
+                            ...styles.navLink,
+                            ...(isActive(item.path) ? styles.navLinkActive : {}),
+                        }}
+                    >
+                        <span style={styles.navIcon}>{item.icon}</span>
+                        <span>{item.label}</span>
+                        {item.badge && <span style={styles.badge}>{item.badge}</span>}
+                    </Link>
+                ))}
             </nav>
-            <button onClick={handleLogout} style={styles.logoutBtn}>🚪 <span>Logout</span></button>
+
+            {/* Bottom */}
+            <div style={styles.bottom}>
+                <div style={styles.clusterStatus}>
+                    <span style={styles.greenDot} />
+                    <span style={styles.clusterLabel}>Store Online</span>
+                    <span style={styles.stableTag}>Active</span>
+                </div>
+                <button onClick={handleLogout} style={styles.logoutBtn}>
+                    <span>↪</span>
+                    <span>Logout</span>
+                </button>
+            </div>
         </div>
         </>
     );
 };
 
 const styles = {
-    sidebar: { width: '260px', background: '#006d2f', color: '#fff', padding: '20px 0', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column' },
-    logo: { padding: '0 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' },
-    subtitle: { fontSize: '11px', color: '#8e9eab', marginTop: '4px', letterSpacing: '1.5px', textTransform: 'uppercase' },
-    storeBanner: { padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.08)' },
-    storeLabel: { fontSize: '10px', color: '#8e9eab', letterSpacing: '1.5px', marginBottom: '4px' },
-    storeName: { fontSize: '15px', fontWeight: '700', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-    nav: { flex: 1, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '4px' },
-    navLink: { color: '#bdc3c7', textDecoration: 'none', padding: '12px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '500', transition: 'all 0.3s' },
-    active: { background: 'rgba(255,255,255,0.15)', color: '#ffffff' },
-    icon: { fontSize: '20px', width: '28px', textAlign: 'center' },
-    badge: { marginLeft: 'auto', background: 'rgba(231,76,60,0.2)', color: '#e74c3c', padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600' },
-    logoutBtn: { margin: '20px 16px', padding: '12px', background: 'rgba(231,76,60,0.15)', color: '#e74c3c', border: '1px solid rgba(231,76,60,0.2)', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.3s', width: 'calc(100% - 32px)' },
+    sidebar: { width: '240px', background: '#0f1117', color: '#fff', padding: '0', position: 'fixed', height: '100vh', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)' },
+    logoArea: { padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
+    logoBox: { display: 'flex', alignItems: 'center', gap: '10px' },
+    logoIcon: { width: '36px', height: '36px', background: '#006d2f', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '800', color: '#fff' },
+    logoText: { fontSize: '16px', fontWeight: '700', color: '#fff', lineHeight: 1.2 },
+    logoSub: { fontSize: '9px', color: '#6b7280', letterSpacing: '1.5px', marginTop: '2px' },
+    storeBanner: { padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,109,47,0.15)' },
+    storeLabel: { fontSize: '10px', color: '#6b7280', letterSpacing: '1.5px', marginBottom: '4px' },
+    storeName: { fontSize: '14px', fontWeight: '700', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+    nav: { flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto' },
+    navLink: { color: '#9ca3af', textDecoration: 'none', padding: '10px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', fontWeight: '500', transition: 'all 0.2s' },
+    navLinkActive: { background: '#006d2f', color: '#fff' },
+    navIcon: { fontSize: '16px', width: '20px', textAlign: 'center', flexShrink: 0 },
+    badge: { marginLeft: 'auto', background: '#dc2626', color: '#fff', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '10px' },
+    bottom: { padding: '12px 8px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '8px' },
+    clusterStatus: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)' },
+    greenDot: { width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', flexShrink: 0 },
+    clusterLabel: { fontSize: '12px', color: '#9ca3af', flex: 1 },
+    stableTag: { fontSize: '11px', color: '#4ade80', fontWeight: '600' },
+    logoutBtn: { padding: '10px 12px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '8px', cursor: 'pointer', fontSize: '13.5px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px', width: '100%', transition: 'all 0.2s' },
 };
 
 export default Sidebar;
