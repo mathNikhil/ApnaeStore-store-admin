@@ -10,6 +10,7 @@ const Orders = () => {
     const [filteredOrders, setFilteredOrders] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [addressFilter, setAddressFilter] = useState('all');
     const [loading, setLoading] = useState(true);
     const [storeId, setStoreId] = useState(null);
 
@@ -44,15 +45,15 @@ const Orders = () => {
 
     const handleStatusFilter = (status) => {
         setStatusFilter(status);
-        filterOrders(search, status);
+        filterOrders(search, status, addressFilter);
     };
 
     const handleSearch = (term) => {
         setSearch(term);
-        filterOrders(term, statusFilter);
+        filterOrders(term, statusFilter, addressFilter);
     };
 
-    const filterOrders = (term, status) => {
+    const filterOrders = (term, status, address) => {
         let filtered = orders;
         
         if (term) {
@@ -66,9 +67,22 @@ const Orders = () => {
         if (status !== 'all') {
             filtered = filtered.filter(o => o.status === status);
         }
+
+        const addr = address !== undefined ? address : addressFilter;
+        if (addr !== 'all') {
+            filtered = filtered.filter(o => (o.branch_name || 'Main Store') === addr);
+        }
         
         setFilteredOrders(filtered);
     };
+
+    const handleAddressFilter = (addr) => {
+        setAddressFilter(addr);
+        filterOrders(search, statusFilter, addr);
+    };
+
+    // Get unique store addresses from orders
+    const storeAddresses = ['all', ...new Set(orders.map(o => o.branch_name || 'Main Store'))];
 
     const handleStatusUpdate = async (orderId, newStatus) => {
         if (!window.confirm(`Change order ${orderId} status to ${newStatus.replace('_', ' ').toUpperCase()}?`)) return;
@@ -197,6 +211,15 @@ const Orders = () => {
                     >
                         {statusOptions.map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={addressFilter}
+                        onChange={(e) => handleAddressFilter(e.target.value)}
+                        style={styles.filterSelect}
+                    >
+                        {storeAddresses.map(addr => (
+                            <option key={addr} value={addr}>{addr === 'all' ? 'All Locations' : addr}</option>
                         ))}
                     </select>
                     <span style={styles.resultCount}>{filteredOrders.length} orders found</span>
