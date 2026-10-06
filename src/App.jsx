@@ -73,6 +73,11 @@ const App = () => {
         let lastOrderId = null;
         window._orderAlertUnlocked = false;
 
+        // Request browser notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         // Unlock audio on first user interaction (browser autoplay policy)
         const unlockAudio = () => { 
             window._orderAlertUnlocked = true;
@@ -97,6 +102,20 @@ const App = () => {
                 if (lastOrderId !== null && latestId !== lastOrderId && window._orderAlertUnlocked) {
                     console.log('[OrderAlert] NEW ORDER DETECTED');
                     playRisingChime();
+                    // Browser notification
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        const latest = orders[0];
+                        const customerName = latest?.customer_name || latest?.customer_phone || 'A customer';
+                        const amount = latest?.total_amount ? '₹' + Number(latest.total_amount).toLocaleString() : '';
+                        const n = new Notification('🛍️ New Order!', {
+                            body: `${customerName} placed an order${amount ? ' — ' + amount : ''}. Tap to view.`,
+                            icon: '/favicon.ico',
+                            tag: 'new-order',
+                            requireInteraction: true,
+                        });
+                        n.onclick = () => { window.focus(); window.location.href = '/orders'; n.close(); };
+                        setTimeout(() => n.close(), 15000);
+                    }
                 }
                 lastOrderId = latestId;
             } catch (e) { console.error('[OrderAlert] fetch error:', e); }
