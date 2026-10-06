@@ -344,7 +344,7 @@ const Inventory = () => {
                                                                 const isOut = currentStock <= 0;
                                                                 const isLow = currentStock > 0 && currentStock < threshold;
                                                                 return (
-                                                                    <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.5 : 1 }}>
+                                                                    <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.4 : 1, pointerEvents: item.is_archived ? 'none' : 'auto', textDecoration: item.is_archived ? 'line-through' : 'none' }}>
                                                                         <td style={styles.td}></td>
                                                                         <td style={styles.td}></td>
                                                                         <td style={{ ...styles.td, paddingLeft: 40, color: '#556067', fontSize: 13 }}>{variant.variation_name}</td>
