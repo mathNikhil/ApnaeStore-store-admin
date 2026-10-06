@@ -102,7 +102,7 @@ const Inventory = () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `tally-inventory-${storeId}.csv`;
+            a.download = `tally-inventory-${storeId}.xlsx`;
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) { alert('Download failed'); }
@@ -115,7 +115,7 @@ const Inventory = () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `inventory-${storeId}.csv`;
+            a.download = `inventory-${storeId}.xlsx`;
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) { console.error(e); }
