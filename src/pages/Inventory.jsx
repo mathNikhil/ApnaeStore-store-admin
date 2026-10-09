@@ -170,9 +170,9 @@ const Inventory = () => {
     const fmt = (n) => parseFloat(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: '#f0f2f5' }}>
             <Sidebar />
-            <div style={{ marginLeft: window.innerWidth <= 900 ? 0 : 260, flex: 1, padding: window.innerWidth <= 900 ? '60px 16px 16px' : 24 }}>
+            <div style={{ marginLeft: '240px', flex: 1, padding: 24 }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
                     <div>
