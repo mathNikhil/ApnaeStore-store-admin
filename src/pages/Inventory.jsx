@@ -172,7 +172,7 @@ const Inventory = () => {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: '#f0f2f5' }}>
             <Sidebar />
-            <div style={{ marginLeft: '240px', flex: 1, padding: 24 }}>
+            <div style={{ marginLeft: '240px', flex: 1, padding: 24, overflowX: 'hidden' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
                     <div>
@@ -228,7 +228,7 @@ const Inventory = () => {
                 </div>
 
                 {/* Table */}
-                <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'visible' }}>
+                <div>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: 40 }}>Loading inventory...</div>
                     ) : filteredItems.length === 0 ? (
