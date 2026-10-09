@@ -228,7 +228,7 @@ const Inventory = () => {
                 </div>
 
                 {/* Table */}
-                <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'visible' }}>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: 40 }}>Loading inventory...</div>
                     ) : filteredItems.length === 0 ? (
@@ -334,7 +334,7 @@ const Inventory = () => {
 
 const styles = {
     tableContainer: { background: 'white', borderRadius: '12px', overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
-    table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', border: '1px solid #eee' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', border: '1px solid #eee', minWidth: '1400px' },
     th: { padding: '14px 16px', background: '#f8f9fa', color: '#556067', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left', borderBottom: '2px solid #eee', borderRight: '1px solid #eee', whiteSpace: 'nowrap' },
     td: { padding: '12px 16px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#2d3436', lineHeight: '1.5' },
     btnPrimary: { background: '#006d2f', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14 },
