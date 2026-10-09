@@ -234,8 +234,8 @@ const Inventory = () => {
                     ) : filteredItems.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>No inventory found. Click Sync to load products.</div>
                     ) : (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
                                 <thead>
                                     <tr>
                                         <th style={{ ...styles.th, position: "sticky", left: 0, zIndex: 3, background: "#f8fafc", minWidth: 60 }}>Image</th>
@@ -333,8 +333,10 @@ const Inventory = () => {
 };
 
 const styles = {
-    th: { padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' },
-    td: { padding: '10px 16px', verticalAlign: 'middle' },
+    tableContainer: { background: 'white', borderRadius: '12px', overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', border: '1px solid #eee' },
+    th: { padding: '14px 16px', background: '#f8f9fa', color: '#556067', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'left', borderBottom: '2px solid #eee', borderRight: '1px solid #eee', whiteSpace: 'nowrap' },
+    td: { padding: '12px 16px', borderBottom: '1px solid #f0f0f0', borderRight: '1px solid #f0f0f0', verticalAlign: 'middle', color: '#2d3436', lineHeight: '1.5' },
     btnPrimary: { background: '#006d2f', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14 },
     btnSecondary: { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 500, fontSize: 14 },
 };
