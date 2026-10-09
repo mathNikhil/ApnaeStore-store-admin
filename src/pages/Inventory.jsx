@@ -262,7 +262,6 @@ const Inventory = () => {
                                         const isLow = currentStock > 0 && currentStock < threshold;
                                         return (
                                             <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.4 : 1, pointerEvents: item.is_archived ? 'none' : 'auto', textDecoration: item.is_archived ? 'line-through' : 'none' }}>
-                                                <td style={styles.td}>
                                                 <td style={{ ...styles.td, position: "sticky", left: 0, background: "inherit", zIndex: 1, minWidth: 60 }}>
                                                     {item.image_url
                                                         ? <img src={item.image_url} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8 }} />
@@ -272,6 +271,7 @@ const Inventory = () => {
                                                 <td style={{ ...styles.td, color: "#556067", position: "sticky", left: 200, background: "inherit", zIndex: 1, minWidth: 100 }}>{item.variation_name}</td>
                                                 <td style={{ ...styles.td, position: "sticky", left: 300, background: "inherit", zIndex: 1, minWidth: 80 }}>{item.size_label}</td>
                                                 <td style={{ ...styles.td, position: "sticky", left: 380, background: "inherit", zIndex: 1, minWidth: 60, color: "#556067", fontSize: 12 }}>{(item.size_label||"").replace(/^[\d.]+\s*/, "")}</td>
+                                                <td style={styles.td}>
                                                     {editingTallyId === item.id ? (
                                                         <div style={{ display: 'flex', gap: 4 }}>
                                                             <input type="text" value={tallyValue} onChange={e => setTallyValue(e.target.value)}
