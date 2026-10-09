@@ -16,8 +16,8 @@ const Inventory = () => {
     const [search, setSearch] = useState('');
     const [sortKey, setSortKey] = useState(null);
     const [sortDir, setSortDir] = useState('asc');
-    const [expandedProducts, setExpandedProducts] = useState({});
-    const [expandedVariants, setExpandedVariants] = useState({});
+    const [editingTallyId, setEditingTallyId] = useState(null);
+    const [tallyValue, setTallyValue] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
     const [threshold, setThreshold] = useState(10);
@@ -67,9 +67,7 @@ const Inventory = () => {
             if (data.success) {
                 setInventory(data.data);
                 setSummary(data.summary);
-                const exp = {};
-                data.data.forEach(item => { exp[item.product_id] = true; });
-                setExpandedProducts(exp);
+
             }
         } catch (e) { console.error(e); }
         setLoading(false);
@@ -136,42 +134,40 @@ const Inventory = () => {
         } catch (e) { console.error(e); }
     };
 
-    // Group inventory
-    const grouped = {};
-    inventory.forEach(item => {
-        if (!grouped[item.product_id]) {
-            grouped[item.product_id] = { product_id: item.product_id, product_name: item.product_name, image_url: item.image_url, is_archived: item.is_archived, variants: {} };
-        }
-        if (!grouped[item.product_id].variants[item.variation_id]) {
-            grouped[item.product_id].variants[item.variation_id] = { variation_id: item.variation_id, variation_name: item.variation_name, image_url: item.image_url, sizes: [] };
-        }
-        grouped[item.product_id].variants[item.variation_id].sizes.push(item);
-        if (!item.is_archived) grouped[item.product_id].is_archived = false;
-    });
+    const handleSaveTallyName = async (id, value) => {
+        try {
+            await fetch(`${API}/api/store/${storeId}/inventory/${id}/tally-name`, {
+                method: 'PATCH', headers: hdrs,
+                body: JSON.stringify({ tally_item_name: value })
+            });
+            setEditingTallyId(null);
+            setInventory(prev => prev.map(item => item.id === id ? { ...item, tally_item_name: value } : item));
+        } catch (e) {}
+    };
 
-    // Aggregate helpers
-    const sumSizes = (sizes, key) => sizes.reduce((s, r) => s + (parseInt(r[key]) || 0), 0);
-    const avgPrice = (sizes) => sizes.length ? sizes.reduce((s, r) => s + parseFloat(r.price || 0), 0) / sizes.length : 0;
-
-    const filteredGroups = Object.values(grouped).filter(p =>
-        !search || p.product_name?.toLowerCase().includes(search.toLowerCase())
-    );
+    // Flat inventory - no grouping needed
+    // Flat inventory list with search and sort
+    const filteredItems = inventory
+        .filter(item => !search || item.product_name?.toLowerCase().includes(search.toLowerCase()) || item.variation_name?.toLowerCase().includes(search.toLowerCase()) || item.size_label?.toLowerCase().includes(search.toLowerCase()) || (item.tally_item_name || "").toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => {
+            if (!sortKey) return 0;
+            const av = a[sortKey]; const bv = b[sortKey];
+            const cmp = isNaN(av) ? String(av||"").localeCompare(String(bv||"")) : parseFloat(av||0) - parseFloat(bv||0);
+            return sortDir === "asc" ? cmp : -cmp;
+        });
 
     const handleSort = (key) => {
-        if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-        else { setSortKey(key); setSortDir('asc'); }
+        if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+        else { setSortKey(key); setSortDir("asc"); }
     };
 
     const SortArrow = ({ col }) => (
         <span style={{ marginLeft: 4, opacity: sortKey === col ? 1 : 0.4, fontSize: 10 }}>
-            {sortKey === col ? (sortDir === 'asc' ? '▲' : '▼') : '▲▼'}
+            {sortKey === col ? (sortDir === "asc" ? "▲" : "▼") : "▲▼"}
         </span>
     );
 
-    const toggleProduct = (id) => setExpandedProducts(p => ({ ...p, [id]: !p[id] }));
-    const toggleVariant = (id) => setExpandedVariants(p => ({ ...p, [id]: !p[id] }));
-
-    const fmt = (n) => parseFloat(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    const fmt = (n) => parseFloat(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
@@ -235,157 +231,93 @@ const Inventory = () => {
                 <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: 40 }}>Loading inventory...</div>
-                    ) : filteredGroups.length === 0 ? (
+                    ) : filteredItems.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>No inventory found. Click Sync to load products.</div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                                 <thead>
-                                    <tr style={{ background: '#f9fafb' }}>
+                                    <tr>
                                         <th style={styles.th}>Image</th>
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('product_name')}>Product <SortArrow col="product_name" /></th>
                                         <th style={styles.th}>Variant</th>
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('size_label')}>Size <SortArrow col="size_label" /></th>
+                                        <th style={styles.th}>Account Name</th>
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('price')}>Price <SortArrow col="price" /></th>
-                                        <th style={{ ...styles.th, color: '#006d2f', cursor: 'pointer' }} onClick={() => handleSort('stock_quantity')}>InStock <SortArrow col="stock_quantity" /></th>
+                                        <th style={{ ...styles.th, color: '#006d2f', cursor: 'pointer' }} onClick={() => handleSort('stock_quantity')}>Stock In <SortArrow col="stock_quantity" /></th>
                                         <th style={styles.th}>Sold</th>
                                         <th style={styles.th}>Sale Type</th>
                                         <th style={styles.th}>Returned</th>
-                                        <th style={{ ...styles.th, color: '#16a34a', cursor: 'pointer' }} onClick={() => handleSort('current_stock')}>Current Stock <SortArrow col="current_stock" /></th>
+                                        <th style={styles.th}>Stock Out</th>
+                                        <th style={{ ...styles.th, color: '#16a34a', cursor: 'pointer' }} onClick={() => handleSort('current_stock')}>Closing Balance <SortArrow col="current_stock" /></th>
                                         <th style={styles.th}>Total Value</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredGroups.map(product => {
-                                        const isProductExpanded = expandedProducts[product.product_id];
-                                        const allSizes = Object.values(product.variants).flatMap(v => v.sizes);
-                                        const variantCount = Object.keys(product.variants).length;
-                                        const sizeCount = new Set(allSizes.map(s => s.size_label)).size;
-                                        const allPrices = [...new Set(allSizes.map(s => parseFloat(s.price||0)))];
-                                        const pMinPrice = Math.min(...allPrices);
-                                        const pMaxPrice = Math.max(...allPrices);
-                                        const pPriceDisplay = pMinPrice === pMaxPrice ? `₹${fmt(pMinPrice)}` : `₹${fmt(pMinPrice)} - ₹${fmt(pMaxPrice)}`;
-                                        const pInStock = sumSizes(allSizes, 'stock_quantity');
-                                        const pSold = sumSizes(allSizes, 'total_sold');
-                                        const pReturned = sumSizes(allSizes, 'total_returned');
-                                        const pCurrent = pInStock - pSold + pReturned;
-                                        const pValue = allSizes.reduce((s, r) => s + parseFloat(r.total_value || 0), 0);
-                                        const pHasLowStock = allSizes.some(s => parseInt(s.current_stock || 0) < threshold);
-                                        const pIsArchived = allSizes.every(s => s.is_archived);
-
+                                    {filteredItems.map(item => {
+                                        const currentStock = parseInt(item.current_stock || 0);
+                                        const stockOut = parseInt(item.total_sold || 0) - parseInt(item.total_returned || 0);
+                                        const isOut = currentStock <= 0;
+                                        const isLow = currentStock > 0 && currentStock < threshold;
                                         return (
-                                            <React.Fragment key={product.product_id}>
-                                                {/* Product Row */}
-                                                <tr style={{ background: pIsArchived ? '#f3f4f6' : pHasLowStock ? '#fff5f5' : '#f8fafc', borderBottom: '2px solid #e5e7eb', cursor: 'pointer', opacity: pIsArchived ? 0.5 : 1 }} onClick={() => toggleProduct(product.product_id)}>
-                                                    <td style={styles.td}>
-                                                        {product.image_url
-                                                            ? <img src={product.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
-                                                            : <div style={{ width: 40, height: 40, background: '#e0e3e6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📦</div>}
-                                                    </td>
-                                                    <td style={{ ...styles.td, fontWeight: 700, color: '#006d2f' }}>
-                                                        <span style={{ marginRight: 8 }}>{isProductExpanded ? '▼' : '▶'}</span>
-                                                        {product.product_name}{pIsArchived && <span style={{ marginLeft: 8, fontSize: 10, background: '#e5e7eb', color: '#6b7280', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>ARCHIVED</span>}
-                                                    </td>
-                                                    <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{variantCount} variants</td>
-                                                    <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{sizeCount} sizes</td>
-                                                    <td style={styles.td}>{pPriceDisplay}</td>
-                                                    <td style={{ ...styles.td, color: '#006d2f', fontWeight: 600 }}>{pInStock}</td>
-                                                    <td style={styles.td}>{pSold}</td>
-                                        <td style={styles.td}>—</td>
-                                                    <td style={styles.td}>{pReturned}</td>
-                                                    <td style={{ ...styles.td, fontWeight: 700, color: pCurrent <= 0 ? '#dc2626' : '#16a34a' }}>{pCurrent}</td>
-                                                    <td style={styles.td}>₹{fmt(pValue)}</td>
-                                                </tr>
-
-                                                {/* Variants */}
-                                                {isProductExpanded && Object.values(product.variants).map(variant => {
-                                                    const varKey = `${product.product_id}_${variant.variation_id}`;
-                                                    const isVariantExpanded = expandedVariants[varKey] !== false;
-                                                    const vSizes = variant.sizes;
-                                                    const vSizeCount = vSizes.length;
-                                                    const vPrices = [...new Set(vSizes.map(s => parseFloat(s.price || 0)))];
-                                                    const vMinPrice = Math.min(...vPrices);
-                                                    const vMaxPrice = Math.max(...vPrices);
-                                                    const vPriceDisplay = vMinPrice === vMaxPrice ? `₹${fmt(vMinPrice)}` : `₹${fmt(vMinPrice)} - ₹${fmt(vMaxPrice)}`;
-                                                    const vInStock = sumSizes(vSizes, 'stock_quantity');
-                                                    const vSold = sumSizes(vSizes, 'total_sold');
-                                                    const vReturned = sumSizes(vSizes, 'total_returned');
-                                                    const vCurrent = vInStock - vSold + vReturned;
-                                                    const vValue = vSizes.reduce((s, r) => s + parseFloat(r.total_value || 0), 0);
-                                                    const vHasLowStock = vSizes.some(s => parseInt(s.current_stock || 0) < threshold);
-
-                                                    return (
-                                                        <React.Fragment key={variant.variation_id}>
-                                                            {/* Variant Row */}
-                                                            <tr style={{ background: vHasLowStock ? '#fff5f5' : '#f3f4f6', cursor: 'pointer', borderBottom: '1px solid #e5e7eb' }} onClick={() => toggleVariant(varKey)}>
-                                                                <td style={styles.td}>
-                                                                    {variant.image_url
-                                                                        ? <img src={variant.image_url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, marginLeft: 12 }} />
-                                                                        : <div style={{ width: 36, height: 36, marginLeft: 12 }} />}
-                                                                </td>
-                                                                <td style={styles.td}></td>
-                                                                <td style={{ ...styles.td, fontWeight: 600, color: '#374151' }}>
-                                                                    <span style={{ marginRight: 8, color: '#888' }}>{isVariantExpanded ? '▼' : '▶'}</span>
-                                                                    {variant.variation_name}
-                                                                </td>
-                                                                <td style={{ ...styles.td, color: '#556067', fontSize: 13 }}>{vSizeCount} sizes</td>
-                                                                <td style={styles.td}>{vPriceDisplay}</td>
-                                                                <td style={{ ...styles.td, color: '#006d2f', fontWeight: 600 }}>{vInStock}</td>
-                                                                <td style={styles.td}>{vSold}</td>
-                                                                <td style={styles.td}>—</td>
-                                                                <td style={styles.td}>{vReturned}</td>
-                                                                <td style={{ ...styles.td, fontWeight: 700, color: vCurrent <= 0 ? '#dc2626' : '#16a34a' }}>{vCurrent}</td>
-                                                                <td style={styles.td}>₹{fmt(vValue)}</td>
-                                                            </tr>
-
-                                                            {/* Size Rows */}
-                                                            {isVariantExpanded && vSizes.map(item => {
-                                                                const currentStock = parseInt(item.current_stock || 0);
-                                                                const isOut = currentStock <= 0;
-                                                                const isLow = currentStock > 0 && currentStock < threshold;
-                                                                return (
-                                                                    <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.4 : 1, pointerEvents: item.is_archived ? 'none' : 'auto', textDecoration: item.is_archived ? 'line-through' : 'none' }}>
-                                                                        <td style={styles.td}></td>
-                                                                        <td style={styles.td}></td>
-                                                                        <td style={{ ...styles.td, paddingLeft: 40, color: '#556067', fontSize: 13 }}>{variant.variation_name}</td>
-                                                                        <td style={styles.td}>{item.size_label}</td>
-                                                                        <td style={styles.td}>₹{fmt(item.price)}</td>
-                                                                        <td style={styles.td}>
-                                                                            {editingId === item.id ? (
-                                                                                <div style={{ display: 'flex', gap: 4 }}>
-                                                                                    <input type="number" value={editValue} onChange={e => setEditValue(e.target.value)}
-                                                                                        style={{ width: 60, border: '2px solid #006d2f', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
-                                                                                        min="0" autoFocus
-                                                                                        onKeyDown={e => { if (e.key === 'Enter') handleUpdateStock(item.id, editValue); if (e.key === 'Escape') setEditingId(null); }} />
-                                                                                    <button onClick={() => handleUpdateStock(item.id, editValue)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✓</button>
-                                                                                    <button onClick={() => setEditingId(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✕</button>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <span onClick={() => { setEditingId(item.id); setEditValue(item.stock_quantity); }}
-                                                                                    style={{ background: '#f0faf4', color: '#006d2f', padding: '4px 10px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
-                                                                                    {item.stock_quantity} ✏️
-                                                                                </span>
-                                                                            )}
-                                                                        </td>
-                                                                        <td style={styles.td}>{item.total_sold}</td>
-                                                                        <td style={styles.td}>
-                                                                            {item.instore_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#92400e', marginRight: 4 }}>{dineInLabel}: {item.instore_sold}</span>}
-                                                                            {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#e8f5e9', color: '#005a27' }}>Delivery: {item.online_sold}</span>}
-                                                                        </td>
-                                                                        <td style={styles.td}>{item.total_returned}</td>
-                                                                        <td style={styles.td}>
-                                                                            <span style={{ fontWeight: 700, color: isOut ? '#dc2626' : isLow ? '#d97706' : '#16a34a' }}>
-                                                                                {currentStock}{isOut ? ' ⚠️' : isLow ? ' 🔸' : ''}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td style={styles.td}>₹{fmt(item.total_value)}</td>
-                                                                    </tr>
-                                                                );
-                                                            })}
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </React.Fragment>
+                                            <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.4 : 1, pointerEvents: item.is_archived ? 'none' : 'auto', textDecoration: item.is_archived ? 'line-through' : 'none' }}>
+                                                <td style={styles.td}>
+                                                    {item.image_url
+                                                        ? <img src={item.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
+                                                        : <div style={{ width: 40, height: 40, background: '#e0e3e6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📦</div>}
+                                                </td>
+                                                <td style={{ ...styles.td, fontWeight: 600, color: '#006d2f' }}>{item.product_name}</td>
+                                                <td style={{ ...styles.td, color: '#556067' }}>{item.variation_name}</td>
+                                                <td style={styles.td}>{item.size_label}</td>
+                                                <td style={styles.td}>
+                                                    {editingTallyId === item.id ? (
+                                                        <div style={{ display: 'flex', gap: 4 }}>
+                                                            <input type="text" value={tallyValue} onChange={e => setTallyValue(e.target.value)}
+                                                                style={{ width: 120, border: '2px solid #006d2f', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
+                                                                autoFocus placeholder="Tally item name"
+                                                                onKeyDown={e => { if (e.key === 'Enter') handleSaveTallyName(item.id, tallyValue); if (e.key === 'Escape') setEditingTallyId(null); }} />
+                                                            <button onClick={() => handleSaveTallyName(item.id, tallyValue)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✓</button>
+                                                            <button onClick={() => setEditingTallyId(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✕</button>
+                                                        </div>
+                                                    ) : (
+                                                        <span onClick={() => { setEditingTallyId(item.id); setTallyValue(item.tally_item_name || ''); }}
+                                                            style={{ background: item.tally_item_name ? '#f0faf4' : '#f9fafb', color: item.tally_item_name ? '#006d2f' : '#9ca3af', padding: '4px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'inline-block', minWidth: 80 }}>
+                                                            {item.tally_item_name || '+ Add name'} ✏️
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={styles.td}>₹{fmt(item.price)}</td>
+                                                <td style={styles.td}>
+                                                    {editingId === item.id ? (
+                                                        <div style={{ display: 'flex', gap: 4 }}>
+                                                            <input type="number" value={editValue} onChange={e => setEditValue(e.target.value)}
+                                                                style={{ width: 60, border: '2px solid #006d2f', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
+                                                                min="0" autoFocus
+                                                                onKeyDown={e => { if (e.key === 'Enter') handleUpdateStock(item.id, editValue); if (e.key === 'Escape') setEditingId(null); }} />
+                                                            <button onClick={() => handleUpdateStock(item.id, editValue)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✓</button>
+                                                            <button onClick={() => setEditingId(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✕</button>
+                                                        </div>
+                                                    ) : (
+                                                        <span onClick={() => { setEditingId(item.id); setEditValue(item.stock_quantity); }}
+                                                            style={{ background: '#f0faf4', color: '#006d2f', padding: '4px 10px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
+                                                            {item.stock_quantity} ✏️
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={styles.td}>{item.total_sold}</td>
+                                                <td style={styles.td}>
+                                                    {item.instore_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#fef3c7', color: '#92400e', marginRight: 4 }}>{dineInLabel}: {item.instore_sold}</span>}
+                                                    {item.online_sold > 0 && <span style={{ padding: '2px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: '#e8f5e9', color: '#005a27' }}>Delivery: {item.online_sold}</span>}
+                                                </td>
+                                                <td style={styles.td}>{item.total_returned}</td>
+                                                <td style={styles.td}><span style={{ fontWeight: 600, color: stockOut < 0 ? '#16a34a' : '#374151' }}>{stockOut}</span></td>
+                                                <td style={styles.td}>
+                                                    <span style={{ fontWeight: 700, color: isOut ? '#dc2626' : isLow ? '#d97706' : '#16a34a' }}>
+                                                        {currentStock}{isOut ? ' ⚠️' : isLow ? ' 🔸' : ''}
+                                                    </span>
+                                                </td>
+                                                <td style={styles.td}>₹{fmt(item.total_value)}</td>
+                                            </tr>
                                         );
                                     })}
                                 </tbody>
