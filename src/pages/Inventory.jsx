@@ -238,10 +238,11 @@ const Inventory = () => {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                                 <thead>
                                     <tr>
-                                        <th style={styles.th}>Image</th>
-                                        <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('product_name')}>Product <SortArrow col="product_name" /></th>
-                                        <th style={styles.th}>Variant</th>
-                                        <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('size_label')}>Size <SortArrow col="size_label" /></th>
+                                        <th style={{ ...styles.th, position: "sticky", left: 0, zIndex: 3, background: "#f8fafc", minWidth: 60 }}>Image</th>
+                                        <th style={{ ...styles.th, cursor: "pointer", position: "sticky", left: 60, zIndex: 3, background: "#f8fafc", minWidth: 140 }} onClick={() => handleSort("product_name")}>Product <SortArrow col="product_name" /></th>
+                                        <th style={{ ...styles.th, position: "sticky", left: 200, zIndex: 3, background: "#f8fafc", minWidth: 100 }}>Variant</th>
+                                        <th style={{ ...styles.th, cursor: "pointer", position: "sticky", left: 300, zIndex: 3, background: "#f8fafc", minWidth: 80 }} onClick={() => handleSort("size_label")}>Size <SortArrow col="size_label" /></th>
+                                        <th style={{ ...styles.th, position: "sticky", left: 380, zIndex: 3, background: "#f8fafc", minWidth: 60 }}>Unit</th>
                                         <th style={styles.th}>Account Name</th>
                                         <th style={{ ...styles.th, cursor: 'pointer' }} onClick={() => handleSort('price')}>Price <SortArrow col="price" /></th>
                                         <th style={{ ...styles.th, color: '#006d2f', cursor: 'pointer' }} onClick={() => handleSort('stock_quantity')}>Stock In <SortArrow col="stock_quantity" /></th>
@@ -262,14 +263,15 @@ const Inventory = () => {
                                         return (
                                             <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6', background: item.is_archived ? '#f3f4f6' : isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#fff', opacity: item.is_archived ? 0.4 : 1, pointerEvents: item.is_archived ? 'none' : 'auto', textDecoration: item.is_archived ? 'line-through' : 'none' }}>
                                                 <td style={styles.td}>
+                                                <td style={{ ...styles.td, position: "sticky", left: 0, background: "inherit", zIndex: 1, minWidth: 60 }}>
                                                     {item.image_url
-                                                        ? <img src={item.image_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
-                                                        : <div style={{ width: 40, height: 40, background: '#e0e3e6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📦</div>}
+                                                        ? <img src={item.image_url} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8 }} />
+                                                        : <div style={{ width: 40, height: 40, background: "#e0e3e6", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>📦</div>}
                                                 </td>
-                                                <td style={{ ...styles.td, fontWeight: 600, color: '#006d2f' }}>{item.product_name}</td>
-                                                <td style={{ ...styles.td, color: '#556067' }}>{item.variation_name}</td>
-                                                <td style={styles.td}>{item.size_label}</td>
-                                                <td style={styles.td}>
+                                                <td style={{ ...styles.td, fontWeight: 600, color: "#006d2f", position: "sticky", left: 60, background: "inherit", zIndex: 1, minWidth: 140 }}>{item.product_name}</td>
+                                                <td style={{ ...styles.td, color: "#556067", position: "sticky", left: 200, background: "inherit", zIndex: 1, minWidth: 100 }}>{item.variation_name}</td>
+                                                <td style={{ ...styles.td, position: "sticky", left: 300, background: "inherit", zIndex: 1, minWidth: 80 }}>{item.size_label}</td>
+                                                <td style={{ ...styles.td, position: "sticky", left: 380, background: "inherit", zIndex: 1, minWidth: 60, color: "#556067", fontSize: 12 }}>{(item.size_label||"").replace(/^[\d.]+\s*/, "")}</td>
                                                     {editingTallyId === item.id ? (
                                                         <div style={{ display: 'flex', gap: 4 }}>
                                                             <input type="text" value={tallyValue} onChange={e => setTallyValue(e.target.value)}
