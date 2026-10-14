@@ -1,11 +1,16 @@
 import QRCode from 'qrcode';
 
-export const renderQRPrintHTML = async (products, storeName = '') => {
-  // Generate one QR image per product — each gets its own unique token
+export const renderQRPrintHTML = async (products, storeName = '', mode = 'catalog') => {
+  // In sticker mode, expand each product into qty copies
+  const expandedProducts = mode === 'sticker'
+    ? products.flatMap(p => Array.from({ length: p.qty || 1 }, () => p))
+    : products;
+
+  // Generate QR images
   const productQRs = await Promise.all(
-    products.map(async (p) => {
+    expandedProducts.map(async (p) => {
       const dataUrl = await QRCode.toDataURL(p.token, {
-        width: 300,
+        width: mode === 'sticker' ? 200 : 300,
         margin: 1,
         color: { dark: '#000000', light: '#ffffff' }
       });
@@ -14,7 +19,6 @@ export const renderQRPrintHTML = async (products, storeName = '') => {
   );
 
   const cards = productQRs.map(p => {
-    // Parse size and unit from size_label e.g. "500 ml" → size="500", unit="ml"
     const sl = p.size_label || '';
     const sizeMatch = sl.match(/^([\d.]+)\s*(.*)$/);
     const sizeNum = sizeMatch ? sizeMatch[1] : sl;
@@ -25,6 +29,21 @@ export const renderQRPrintHTML = async (products, storeName = '') => {
     const price   = Number(p.selling_price || 0).toLocaleString('en-IN');
     const img     = p.image_url ? esc(p.image_url) : '';
 
+    if (mode === 'sticker') {
+      // Compact sticker: no product image, tighter layout for cutting
+      return `
+<div class="sticker">
+  <img class="sticker-qr" src="${p.qrDataUrl}" alt="QR" />
+  <div class="sticker-info">
+    <div class="sticker-name">${name}</div>
+    ${variant ? `<div class="sticker-meta">${variant}</div>` : ''}
+    ${sizeNum ? `<div class="sticker-meta">${esc(sizeNum)}${unit ? ' ' + esc(unit) : ''}</div>` : ''}
+    <div class="sticker-price">₹${price}</div>
+  </div>
+</div>`;
+    }
+
+    // Catalog card (original layout)
     return `
 <div class="card">
   <div class="qr-wrap">
@@ -45,20 +64,84 @@ export const renderQRPrintHTML = async (products, storeName = '') => {
   }).join('');
 
   const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  const labelCount = mode === 'sticker' ? productQRs.length : products.length;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>QR Labels — ${esc(storeName)}</title>
+<title>${mode === 'sticker' ? 'QR Stickers' : 'QR Labels'} — ${esc(storeName)}</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:10mm 8mm}
+body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:${mode === 'sticker' ? '6mm 5mm' : '10mm 8mm'}}
 
-.header{text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #ddd}
-.header h1{font-size:15px;font-weight:700}
+.header{text-align:center;margin-bottom:${mode === 'sticker' ? '8px' : '14px'};padding-bottom:8px;border-bottom:1px solid #ddd}
+.header h1{font-size:${mode === 'sticker' ? '13px' : '15px'};font-weight:700}
 .header p{font-size:11px;color:#888;margin-top:3px}
 
+${mode === 'sticker' ? `
+/* ── Sticker layout ── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:4px
+}
+.sticker{
+  border:1px dashed #bbb;
+  border-radius:4px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  background:#fff;
+  break-inside:avoid;
+  page-break-inside:avoid;
+  padding:4px 5px;
+  gap:5px
+}
+.sticker-qr{
+  flex-shrink:0;
+  width:56px;
+  height:56px;
+  display:block
+}
+.sticker-info{
+  flex:1;
+  min-width:0;
+  text-align:left
+}
+.sticker-name{
+  font-size:8px;
+  font-weight:700;
+  color:#111;
+  line-height:1.3;
+  margin-bottom:1px;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical
+}
+.sticker-meta{
+  font-size:7.5px;
+  color:#555;
+  line-height:1.3
+}
+.sticker-price{
+  font-size:9px;
+  font-weight:700;
+  color:#1a56db;
+  margin-top:2px
+}
+
+@media print{
+  @page{size:A4 portrait;margin:6mm 5mm}
+  body{padding:0}
+  .grid{gap:3px}
+  .sticker{border-color:#ccc}
+  .sticker-qr{width:52px;height:52px}
+}
+` : `
+/* ── Catalog layout ── */
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 
 .card{
@@ -93,12 +176,13 @@ body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:1
   .qr-img{max-width:105px}
   .prod-img-wrap{height:68px}
 }
+`}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>${esc(storeName)} — Product QR Labels</h1>
-  <p>Printed on ${date} &nbsp;·&nbsp; ${productQRs.length} label${productQRs.length !== 1 ? 's' : ''}</p>
+  <h1>${esc(storeName)} — ${mode === 'sticker' ? 'Product QR Stickers' : 'Product QR Labels'}</h1>
+  <p>Printed on ${date} &nbsp;·&nbsp; ${labelCount} ${mode === 'sticker' ? 'sticker' : 'label'}${labelCount !== 1 ? 's' : ''}${mode === 'sticker' ? ' &nbsp;·&nbsp; cut along dashed lines' : ''}</p>
 </div>
 <div class="grid">${cards}</div>
 <script>
