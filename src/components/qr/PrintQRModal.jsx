@@ -9,7 +9,6 @@ const PrintQRModal = ({ storeId, onClose }) => {
 
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState(new Set());
-  const [qrSize, setQrSize] = useState(5); // cm
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
@@ -91,14 +90,19 @@ const PrintQRModal = ({ storeId, onClose }) => {
         return {
           ...match,
           token: t.token,
+          product_name: match?.product_name || match?.name || 'Product',
           name: match?.product_name || match?.name || 'Product',
-          variant_name: match?.variant_name || '',
+          variation_name: match?.variation_name || match?.variant_name || '',
+          variant_name: match?.variation_name || match?.variant_name || '',
+          size_label: match?.size_label || match?.size || '',
+          image_url: match?.image_url || '',
           sku: t.sku,
+          selling_price: match?.selling_price || match?.price || 0,
           price: match?.selling_price || match?.price || 0
         };
       });
 
-      const html = await renderQRPrintHTML(productsWithTokens, qrSize, storeName);
+      const html = await renderQRPrintHTML(productsWithTokens, storeName);
       const printWindow = window.open('', '_blank');
       printWindow.document.write(html);
       printWindow.document.close();
@@ -121,20 +125,9 @@ const PrintQRModal = ({ storeId, onClose }) => {
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666' }}>×</button>
         </div>
 
-        {/* QR Size slider */}
-        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>QR Size</span>
-            <span style={{ fontSize: 14, color: '#1a56db', fontWeight: 700 }}>{qrSize} cm × {qrSize} cm</span>
-          </div>
-          <input
-            type="range" min={3} max={8} step={0.5} value={qrSize}
-            onChange={e => setQrSize(Number(e.target.value))}
-            style={{ width: '100%' }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginTop: 2 }}>
-            <span>3 cm (small tag)</span><span>8 cm (shelf label)</span>
-          </div>
+        {/* A4 grid info */}
+        <div style={{ background: '#f0f7ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#1e40af' }}>
+          📄 Prints as A4 grid — 4 labels per row, with product image + details under each QR code
         </div>
 
         {/* Product search + select */}

@@ -15,7 +15,6 @@ const Dashboard = () => {
     const [recentOrders, setRecentOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [storeId, setStoreId] = useState(null);
-    const [qrActive, setQrActive] = useState(false);
     const navigate = useNavigate();
     const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
 
@@ -28,11 +27,6 @@ const Dashboard = () => {
         }
         setStoreId(storedStoreId);
         fetchDashboardData(storedStoreId);
-        // Use public endpoint — no auth needed
-        fetch(`${API}/api/qr/status/${storedStoreId}`)
-            .then(r => r.json())
-            .then(d => setQrActive(d.active === true))
-            .catch(() => {});
     }, []);
 
     const fetchDashboardData = async (sid) => {
@@ -96,39 +90,6 @@ const Dashboard = () => {
                         <span style={styles.dateRange}>📅 Last 30 days</span>
                     </div>
                 </div>
-
-                {/* QR Scanner — activate or status banner */}
-                {!qrActive && (
-                    <div style={{
-                        background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                        borderRadius: 14, padding: '18px 22px', marginBottom: 20,
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        color: '#fff', flexWrap: 'wrap', gap: 12
-                    }}>
-                        <div>
-                            <div style={{ fontWeight: 700, fontSize: 16 }}>📱 Go Offline to Online</div>
-                            <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>
-                                Let staff scan products in-store to add directly to customer cart
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setShowQRModal(true)}
-                            style={{ background: '#fff', color: '#7c3aed', border: 'none', borderRadius: 8, padding: '9px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
-                        >
-                            Activate QR Scanner
-                        </button>
-                    </div>
-                )}
-                {qrActive && (
-                    <div style={{
-                        background: '#f0fdf4', border: '1px solid #bbf7d0',
-                        borderRadius: 12, padding: '12px 18px', marginBottom: 20,
-                        display: 'flex', alignItems: 'center', gap: 10, color: '#15803d', fontSize: 14
-                    }}>
-                        <span style={{ fontSize: 20 }}>✅</span>
-                        <span><strong>QR Scanner is active</strong> — Go to Inventory to print QR codes for your products</span>
-                    </div>
-                )}
 
                 {/* ✅ Return requests — always visible like the other stat
                     cards, not hidden when zero, so it's consistently where
@@ -237,13 +198,6 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
-            {showQRModal && (
-                <QRActivationModal
-                    storeId={storeId}
-                    onClose={() => setShowQRModal(false)}
-                    onActivated={() => { setQrActive(true); setShowQRModal(false); }}
-                />
-            )}
         </div>
     );
 };

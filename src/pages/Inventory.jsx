@@ -42,12 +42,13 @@ const Inventory = () => {
         }
     }, []);
 
-    const fetchQRStatus = async () => {
-        try {
-            const res = await fetch(`${API}/api/qr/status-admin/${storeId}`, { headers: hdrs });
-            const data = await res.json();
-            setQrActive(data.active || false);
-        } catch (e) {}
+    const fetchQRStatus = (attempt = 1) => {
+        fetch(`${API}/api/qr/status/${storeId}`)
+            .then(r => r.json())
+            .then(d => setQrActive(d.active === true))
+            .catch(() => {
+                if (attempt < 3) setTimeout(() => fetchQRStatus(attempt + 1), 1500 * attempt);
+            });
     };
 
     const fetchThreshold = async () => {
