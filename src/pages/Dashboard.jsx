@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
-import QRActivationModal from '../components/qr/QRActivationModal';
-
 const Dashboard = () => {
     const [stats, setStats] = useState({
         total_orders: 0,
@@ -18,16 +16,11 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [storeId, setStoreId] = useState(null);
     const [qrActive, setQrActive] = useState(false);
-    const [showQRModal, setShowQRModal] = useState(false);
     const navigate = useNavigate();
     const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
 
     useEffect(() => {
         const token = localStorage.getItem('storeAdminToken');
-        // ✅ A session reaching this page is always already locked to one
-        // store — resolved and ownership-verified at login (see Login.jsx).
-        // There's nothing to "select" here anymore; if either piece is
-        // missing, this isn't a valid session, back to login.
         const storedStoreId = localStorage.getItem('currentStoreId');
         if (!token || !storedStoreId) {
             navigate(`/login${window.location.search}`);
@@ -35,18 +28,12 @@ const Dashboard = () => {
         }
         setStoreId(storedStoreId);
         fetchDashboardData(storedStoreId);
-        fetchQRStatus(storedStoreId, token);
+        // Use public endpoint — no auth needed
+        fetch(`${API}/api/qr/status/${storedStoreId}`)
+            .then(r => r.json())
+            .then(d => setQrActive(d.active === true))
+            .catch(() => {});
     }, []);
-
-    const fetchQRStatus = async (sid, token) => {
-        try {
-            const res = await fetch(`${API}/api/qr/status-admin/${sid}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            setQrActive(data.active || false);
-        } catch (e) {}
-    };
 
     const fetchDashboardData = async (sid) => {
         try {
