@@ -17,10 +17,11 @@ const QRActivationModal = ({ storeId, onClose, onActivated }) => {
 
   const fetchPricing = async () => {
     try {
-      const res = await fetch(`${API}/api/qr/pricing/${storeId}`, { headers: hdrs });
+      const res = await fetch(`${API}/api/qr/pricing/${storeId}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setCharge(data);
+      setError('');
     } catch (err) {
       setError(err.message || 'Failed to load pricing');
     }
