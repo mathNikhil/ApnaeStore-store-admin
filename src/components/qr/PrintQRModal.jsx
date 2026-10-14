@@ -65,11 +65,10 @@ const PrintQRModal = ({ storeId, onClose }) => {
       }
 
       // Generate QR tokens from backend
-      const res = await fetch(`${API}/api/qr/generate`, {
+      const res = await fetch(`${API}/api/qr/generate/${storeId}`, {
         method: 'POST',
         headers: hdrs,
         body: JSON.stringify({
-          store_id: storeId,
           products: selectedProducts.map(p => ({
             product_id: p.product_id,
             variant_id: p.variant_id || '',
