@@ -30,16 +30,14 @@ export const renderQRPrintHTML = async (products, storeName = '', mode = 'catalo
     const img     = p.image_url ? esc(p.image_url) : '';
 
     if (mode === 'sticker') {
-      // Compact sticker: no product image, tighter layout for cutting
+      // QR on top, label below — cut along dashed lines = clean rectangle
       return `
 <div class="sticker">
   <img class="sticker-qr" src="${p.qrDataUrl}" alt="QR" />
-  <div class="sticker-info">
-    <div class="sticker-name">${name}</div>
-    ${variant ? `<div class="sticker-meta">${variant}</div>` : ''}
-    ${sizeNum ? `<div class="sticker-meta">${esc(sizeNum)}${unit ? ' ' + esc(unit) : ''}</div>` : ''}
-    <div class="sticker-price">₹${price}</div>
-  </div>
+  <div class="sticker-name">${name}</div>
+  ${variant ? `<div class="sticker-meta">${variant}</div>` : ''}
+  ${sizeNum ? `<div class="sticker-meta">${esc(sizeNum)}${unit ? ' ' + esc(unit) : ''}</div>` : ''}
+  <div class="sticker-price">₹${price}</div>
 </div>`;
     }
 
@@ -80,35 +78,30 @@ body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:$
 .header p{font-size:11px;color:#888;margin-top:3px}
 
 ${mode === 'sticker' ? `
-/* ── Sticker layout ── */
+/* ── Sticker layout — QR top, label bottom, cut-friendly ── */
 .grid{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-  gap:4px
+  gap:5px
 }
 .sticker{
-  border:1px dashed #bbb;
+  border:1px dashed #aaa;
   border-radius:4px;
-  overflow:hidden;
   display:flex;
-  flex-direction:row;
+  flex-direction:column;
   align-items:center;
   background:#fff;
   break-inside:avoid;
   page-break-inside:avoid;
-  padding:4px 5px;
-  gap:5px
+  padding:5px 4px 4px;
+  text-align:center
 }
 .sticker-qr{
-  flex-shrink:0;
-  width:56px;
-  height:56px;
-  display:block
-}
-.sticker-info{
-  flex:1;
-  min-width:0;
-  text-align:left
+  width:100%;
+  max-width:90px;
+  height:auto;
+  display:block;
+  margin-bottom:3px
 }
 .sticker-name{
   font-size:8px;
@@ -119,12 +112,14 @@ ${mode === 'sticker' ? `
   overflow:hidden;
   display:-webkit-box;
   -webkit-line-clamp:2;
-  -webkit-box-orient:vertical
+  -webkit-box-orient:vertical;
+  width:100%
 }
 .sticker-meta{
   font-size:7.5px;
   color:#555;
-  line-height:1.3
+  line-height:1.3;
+  width:100%
 }
 .sticker-price{
   font-size:9px;
@@ -136,9 +131,9 @@ ${mode === 'sticker' ? `
 @media print{
   @page{size:A4 portrait;margin:6mm 5mm}
   body{padding:0}
-  .grid{gap:3px}
-  .sticker{border-color:#ccc}
-  .sticker-qr{width:52px;height:52px}
+  .grid{gap:4px}
+  .sticker{border-color:#bbb;padding:4px 3px 3px}
+  .sticker-qr{max-width:82px}
 }
 ` : `
 /* ── Catalog layout ── */
