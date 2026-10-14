@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
+import PrintQRModal from '../components/qr/PrintQRModal';
 
 const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
 
@@ -24,10 +25,13 @@ const Inventory = () => {
     const [thresholdInput, setThresholdInput] = useState(10);
     const [savingThreshold, setSavingThreshold] = useState(false);
     const [dineInLabel, setDineInLabel] = useState('Dine In');
+    const [qrActive, setQrActive] = useState(false);
+    const [showPrintQR, setShowPrintQR] = useState(false);
 
     useEffect(() => {
         fetchInventory();
         fetchThreshold();
+        fetchQRStatus();
         // Fetch store config for dineInLabel
         const subdomain = localStorage.getItem('currentStoreSubdomain') || localStorage.getItem('currentStoreName');
         if (subdomain) {
@@ -37,6 +41,14 @@ const Inventory = () => {
                 .catch(() => {});
         }
     }, []);
+
+    const fetchQRStatus = async () => {
+        try {
+            const res = await fetch(`${API}/api/qr/status-admin/${storeId}`, { headers: hdrs });
+            const data = await res.json();
+            setQrActive(data.active || false);
+        } catch (e) {}
+    };
 
     const fetchThreshold = async () => {
         try {
@@ -183,7 +195,14 @@ const Inventory = () => {
                         <button onClick={handleSync} disabled={syncing} style={styles.btnSecondary}>{syncing ? 'Syncing...' : '🔄 Sync'}</button>
                         <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download XLSX</button>
                         <button onClick={handleDownloadTallyCSV} style={{...styles.btnSecondary, borderColor:'#0066cc', color:'#0066cc'}}>📊 Download for Tally</button>
-
+                        {qrActive && (
+                            <button
+                                onClick={() => setShowPrintQR(true)}
+                                style={{...styles.btnSecondary, borderColor:'#7c3aed', color:'#7c3aed', fontWeight: 600}}
+                            >
+                                📱 Print QR Codes
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -328,6 +347,12 @@ const Inventory = () => {
                     )}
                 </div>
             </div>
+            {showPrintQR && (
+                <PrintQRModal
+                    storeId={storeId}
+                    onClose={() => setShowPrintQR(false)}
+                />
+            )}
         </div>
     );
 };
