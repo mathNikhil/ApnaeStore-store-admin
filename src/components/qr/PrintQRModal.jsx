@@ -96,8 +96,8 @@ const PrintQRModal = ({ storeId, onClose }) => {
         body: JSON.stringify({
           products: selectedProducts.map(p => ({
             product_id: p.product_id,
-            variant_id: p.variant_id || '',
-            sku: p.sku || '',
+            variant_id: p.variation_id || p.variant_id || '',
+            sku: p.size_id || p.sku || '',
             price: p.selling_price || p.price || 0,
           }))
         })
