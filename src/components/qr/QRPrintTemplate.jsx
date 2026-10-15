@@ -62,9 +62,13 @@ export const renderQRPrintHTML = async (products, storeName = '', mode = 'catalo
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:8mm 7mm}
 
-.page-header{text-align:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #222}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #222}
+.page-header-text{text-align:center;flex:1}
 .page-header h1{font-size:14px;font-weight:700}
 .page-header p{font-size:10px;color:#888;margin-top:3px}
+.print-btn{padding:7px 16px;background:#1a56db;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.print-btn:hover{background:#1e40af}
+@media print{.print-btn{display:none}}
 
 .section{margin-bottom:14px;break-inside:avoid;page-break-inside:avoid}
 
@@ -102,8 +106,11 @@ body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:8
 </head>
 <body>
 <div class="page-header">
-  <h1>${esc(storeName)} — QR Sticker Sheet</h1>
-  <p>Printed on ${date} &nbsp;·&nbsp; ${totalStickers} sticker${totalStickers !== 1 ? 's' : ''} across ${products.length} variant${products.length !== 1 ? 's' : ''} &nbsp;·&nbsp; cut along dashed lines</p>
+  <div class="page-header-text">
+    <h1>${esc(storeName)} — QR Sticker Sheet</h1>
+    <p>Printed on ${date} &nbsp;·&nbsp; ${totalStickers} sticker${totalStickers !== 1 ? 's' : ''} across ${products.length} variant${products.length !== 1 ? 's' : ''} &nbsp;·&nbsp; cut along dashed lines</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨️ Print</button>
 </div>
 ${sections}
 <script>
