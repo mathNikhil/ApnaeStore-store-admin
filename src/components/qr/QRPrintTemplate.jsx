@@ -193,9 +193,9 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111;paddin
 .qr-wrap{
   width:100%;
   display:flex;align-items:center;justify-content:center;
-  padding:8px;background:#fff;
+  padding:16px;background:#fff;
 }
-.qr-img{width:100%;height:auto;aspect-ratio:1;display:block}
+.qr-img{width:75%;height:auto;aspect-ratio:1;display:block}
 
 .bottom-strip{
   display:flex;flex-direction:row;align-items:center;
