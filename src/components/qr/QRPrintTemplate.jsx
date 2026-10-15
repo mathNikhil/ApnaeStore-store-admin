@@ -140,16 +140,18 @@ window.addEventListener('load',function(){setTimeout(function(){window.print();}
   <div class="qr-wrap">
     <img class="qr-img" src="${p.qrDataUrl}" alt="QR" />
   </div>
-  <div class="prod-img-wrap">
-    ${img
-      ? `<img class="prod-img" src="${img}" alt="" />`
-      : `<span class="no-img">📦</span>`}
-  </div>
-  <div class="info">
-    <div class="name">${name}</div>
-    ${variant ? `<div class="meta">${variant}</div>` : ''}
-    ${sizeNum ? `<div class="meta">${esc(sizeNum)}${unit ? ' <span class="unit">' + esc(unit) + '</span>' : ''}</div>` : ''}
-    <div class="price">₹${price}</div>
+  <div class="right">
+    <div class="prod-img-wrap">
+      ${img
+        ? `<img class="prod-img" src="${img}" alt="" />`
+        : `<span class="no-img">📦</span>`}
+    </div>
+    <div class="info">
+      <div class="name">${name}</div>
+      ${variant ? `<div class="meta">${variant}</div>` : ''}
+      ${sizeNum ? `<div class="meta">${esc(sizeNum)}${unit ? ' <span class="unit">' + esc(unit) + '</span>' : ''}</div>` : ''}
+      <div class="price">₹${price}</div>
+    </div>
   </div>
 </div>`;
   }).join('');
@@ -163,57 +165,76 @@ window.addEventListener('load',function(){setTimeout(function(){window.print();}
 <title>QR Labels — ${esc(storeName)}</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#111;padding:10mm 8mm}
+body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111;padding:16px}
 
-.header{text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #ddd}
-.header h1{font-size:15px;font-weight:700}
-.header p{font-size:11px;color:#888;margin-top:3px}
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#fff;border-radius:10px;padding:12px 16px;margin-bottom:14px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)
+}
+.top-bar-left h1{font-size:15px;font-weight:700;margin:0 0 2px}
+.top-bar-left p{font-size:11px;color:#888;margin:0}
+.print-btn{
+  padding:9px 20px;background:#1a56db;color:#fff;border:none;
+  border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+  font-family:inherit;white-space:nowrap
+}
+.print-btn:hover{background:#1e40af}
 
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 
 .card{
-  border:1px solid #ccc;border-radius:7px;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;
-  background:#fff;break-inside:avoid;page-break-inside:avoid
+  border:1px solid #ddd;border-radius:10px;overflow:hidden;
+  display:flex;flex-direction:row;align-items:stretch;
+  background:#fff;break-inside:avoid;page-break-inside:avoid;
+  box-shadow:0 1px 3px rgba(0,0,0,.06)
 }
 
-.qr-wrap{width:100%;padding:7px 7px 3px;display:flex;justify-content:center;background:#fff}
-.qr-img{width:100%;max-width:115px;height:auto;display:block}
+.qr-wrap{
+  flex-shrink:0;width:110px;
+  display:flex;align-items:center;justify-content:center;
+  padding:10px;background:#fff;border-right:1px solid #eee
+}
+.qr-img{width:90px;height:90px;display:block}
+
+.right{display:flex;flex-direction:column;flex:1;min-width:0}
 
 .prod-img-wrap{
-  width:100%;height:75px;overflow:hidden;
+  width:100%;height:80px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
-  background:#f5f5f5;border-top:1px solid #eee;border-bottom:1px solid #eee
+  background:#f9f9f9;border-bottom:1px solid #eee
 }
 .prod-img{width:100%;height:100%;object-fit:cover}
-.no-img{font-size:26px;color:#bbb}
+.no-img{font-size:24px;color:#bbb}
 
-.info{width:100%;padding:6px 8px 8px;text-align:center}
-.name{font-size:10px;font-weight:700;color:#111;line-height:1.3;margin-bottom:2px;
+.info{padding:8px 10px}
+.name{font-size:11px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.meta{font-size:9px;color:#555;margin-bottom:1px;line-height:1.3}
+.meta{font-size:10px;color:#666;margin-bottom:1px}
 .unit{color:#999}
-.price{font-size:12px;font-weight:700;color:#1a56db;margin-top:4px}
+.price{font-size:13px;font-weight:700;color:#1a56db;margin-top:4px}
 
 @media print{
-  @page{size:A4 portrait;margin:10mm 8mm}
-  body{padding:0}
+  @page{size:A4 portrait;margin:8mm}
+  body{padding:0;background:#fff}
+  .top-bar{display:none}
   .grid{gap:8px}
-  .card{border-color:#bbb}
-  .qr-img{max-width:105px}
-  .prod-img-wrap{height:68px}
+  .card{box-shadow:none;border-color:#ccc}
+  .qr-wrap{width:100px;padding:8px}
+  .qr-img{width:82px;height:82px}
+  .prod-img-wrap{height:72px}
 }
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>${esc(storeName)} — Product QR Labels</h1>
-  <p>Printed on ${date} &nbsp;·&nbsp; ${productQRs.length} label${productQRs.length !== 1 ? 's' : ''}</p>
+<div class="top-bar">
+  <div class="top-bar-left">
+    <h1>${esc(storeName)} — Product QR Labels</h1>
+    <p>Printed on ${date} &nbsp;·&nbsp; ${productQRs.length} label${productQRs.length !== 1 ? 's' : ''}</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨️ Print</button>
 </div>
 <div class="grid">${cards}</div>
-<script>
-window.addEventListener('load',function(){setTimeout(function(){window.print();},500);});
-<\/script>
 </body>
 </html>`;
 };
