@@ -193,14 +193,14 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111;paddin
 .qr-wrap{
   width:100%;
   display:flex;align-items:center;justify-content:center;
-  padding:6px 6px 4px;background:#fff;
+  padding:10px 10px 6px;background:#fff;
 }
-.qr-img{width:60%;max-width:70px;height:auto;aspect-ratio:1;display:block}
+.qr-img{width:85%;max-width:160px;height:auto;aspect-ratio:1;display:block}
 
 .right{display:flex;flex-direction:column;flex:1;min-width:0;border-top:1px solid #eee}
 
 .prod-img-wrap{
-  width:100%;aspect-ratio:1/1;overflow:hidden;
+  width:100%;height:70px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
   background:#f9f9f9;border-bottom:1px solid #eee
 }
