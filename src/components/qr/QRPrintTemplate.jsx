@@ -181,7 +181,7 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111;paddin
 }
 .print-btn:hover{background:#1e40af}
 
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 
 .card{
   border:1px solid #ddd;border-radius:10px;overflow:hidden;
