@@ -181,48 +181,47 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111;paddin
 }
 .print-btn:hover{background:#1e40af}
 
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 
 .card{
-  border:1px solid #ddd;border-radius:10px;overflow:hidden;
-  display:flex;flex-direction:row;align-items:stretch;
+  border:1px solid #ddd;border-radius:8px;overflow:hidden;
+  display:flex;flex-direction:column;align-items:stretch;
   background:#fff;break-inside:avoid;page-break-inside:avoid;
   box-shadow:0 1px 3px rgba(0,0,0,.06)
 }
 
 .qr-wrap{
-  flex-shrink:0;width:110px;
+  width:100%;
   display:flex;align-items:center;justify-content:center;
-  padding:10px;background:#fff;border-right:1px solid #eee
+  padding:10px 10px 6px;background:#fff;
 }
-.qr-img{width:90px;height:90px;display:block}
+.qr-img{width:100%;max-width:120px;height:auto;aspect-ratio:1;display:block}
 
-.right{display:flex;flex-direction:column;flex:1;min-width:0}
+.right{display:flex;flex-direction:column;flex:1;min-width:0;border-top:1px solid #eee}
 
 .prod-img-wrap{
-  width:100%;height:80px;overflow:hidden;
+  width:100%;height:60px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
   background:#f9f9f9;border-bottom:1px solid #eee
 }
 .prod-img{width:100%;height:100%;object-fit:cover}
-.no-img{font-size:24px;color:#bbb}
+.no-img{font-size:20px;color:#bbb}
 
-.info{padding:8px 10px}
-.name{font-size:11px;font-weight:700;color:#111;line-height:1.3;margin-bottom:3px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.meta{font-size:10px;color:#666;margin-bottom:1px}
+.info{padding:5px 8px 7px}
+.name{font-size:10px;font-weight:700;color:#111;line-height:1.3;margin-bottom:2px;
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.meta{font-size:9px;color:#666;margin-bottom:1px}
 .unit{color:#999}
-.price{font-size:13px;font-weight:700;color:#1a56db;margin-top:4px}
+.price{font-size:11px;font-weight:700;color:#1a56db;margin-top:3px}
 
 @media print{
   @page{size:A4 portrait;margin:8mm}
   body{padding:0;background:#fff}
   .top-bar{display:none}
-  .grid{gap:8px}
+  .grid{gap:6px}
   .card{box-shadow:none;border-color:#ccc}
-  .qr-wrap{width:100px;padding:8px}
-  .qr-img{width:82px;height:82px}
-  .prod-img-wrap{height:72px}
+  .qr-img{max-width:110px}
+  .prod-img-wrap{height:55px}
 }
 </style>
 </head>
