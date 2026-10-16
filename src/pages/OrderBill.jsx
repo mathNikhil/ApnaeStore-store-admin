@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { storeAdminAPI } from '../services/api';
 
@@ -9,7 +9,6 @@ const OrderBill = () => {
     const [order, setOrder] = useState(null);
     const [storeInfo, setStoreInfo] = useState(null);
     const [loading, setLoading] = useState(true);
-    const printRef = useRef();
 
     useEffect(() => {
         const token = localStorage.getItem('storeAdminToken');
@@ -23,14 +22,11 @@ const OrderBill = () => {
         try {
             const result = await storeAdminAPI.getOrder(storeId, id);
             if (result.success) setOrder(result.data);
-            // Fetch full store config from public API for bill header
             try {
                 const urlParams = new URLSearchParams(location.search);
-                // Get subdomain from URL params, query string, or hostname
                 const hostname = window.location.hostname;
                 const hostnameSubdomain = hostname.includes('.aapnaestore.com') ? hostname.split('.')[0] : null;
                 const subdomain = urlParams.get('subdomain') || urlParams.get('store') || hostnameSubdomain;
-                console.log('[Bill] subdomain:', subdomain, 'hostname:', hostname);
                 if (subdomain) {
                     const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
                     const res = await fetch(`${API}/api/public/store/${subdomain}`);
@@ -42,36 +38,62 @@ const OrderBill = () => {
         finally { setLoading(false); }
     };
 
-    const handlePrint = () => window.print();
+    if (loading) return <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', fontSize:16, color:'#666' }}>Loading order...</div>;
+    if (!order) return <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', fontSize:16, color:'#666' }}>Order not found.</div>;
 
-    if (loading) return <div style={styles.center}>Loading order...</div>;
-    if (!order) return <div style={styles.center}>Order not found.</div>;
-
-    const items = Array.isArray(order.items) ? order.items : [];
-    const addr = order.delivery_address || {};
-    const orderDate = order.created_at
-        ? new Date(order.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
-        : 'N/A';
-    const storeName = storeInfo?.config?.brand?.storeName || storeInfo?.store_name || order.store_name || localStorage.getItem('currentStoreName') || 'Store';
-    const storePhone = storeInfo?.config?.profile?.officeNumber || '';
-    const storeEmail = storeInfo?.config?.profile?.supportEmail || '';
+    // Store config
+    const storeName    = storeInfo?.config?.brand?.storeName || storeInfo?.store_name || order.store_name || localStorage.getItem('currentStoreName') || 'Store';
+    const storePhone   = storeInfo?.config?.profile?.officeNumber || '';
+    const storeEmail   = storeInfo?.config?.profile?.supportEmail || '';
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
-    const storeLogo = storeInfo?.config?.brand?.logoUrl || null;
-    const storeGST = storeInfo?.config?.cart?.gstNumber || '';
-    const hsnCode = storeInfo?.config?.cart?.hsnCode || '';
-    const storeState = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';
-    const enableGST = storeInfo?.config?.cart?.enableGST || false;
-    const storePAN = storeInfo?.config?.cart?.panNumber || storeInfo?.config?.profile?.panNumber || '';
-    const storeFullAddress = storeInfo?.config?.profile?.storeAddress || '';
+    const storeLogo    = storeInfo?.config?.brand?.logoUrl || null;
+    const storeGST     = storeInfo?.config?.cart?.gstNumber || '';
+    const storePAN     = storeInfo?.config?.cart?.panNumber || storeInfo?.config?.profile?.panNumber || '';
+    const hsnCode      = storeInfo?.config?.cart?.hsnCode || '';
+    const storeState   = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';
+    const enableGST    = storeInfo?.config?.cart?.enableGST || false;
+    const gstRate      = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
+    const cgstRate     = gstRate / 2;
+    const sgstRate     = gstRate / 2;
+    const dineInLabel  = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
 
-    // Invoice number — sequential from order_id last 8 chars
-    const invoiceNumber = `INV-${(order.order_id || order.id || '').slice(-10).toUpperCase()}`;
+    // Order data
+    const items = Array.isArray(order.items) ? order.items : [];
+    const addr  = order.delivery_address || {};
+    const orderDate = order.created_at
+        ? new Date(order.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' })
+        : 'N/A';
+    const invoiceNo  = `INV-${(order.order_id || order.id || '').slice(-10).toUpperCase()}`;
+    const totalAmt   = Number(order.total_amount || 0);
+    const taxAmt     = Number(order.tax_amount || 0);
+    const taxableAmt = enableGST && gstRate > 0 ? (totalAmt / (1 + gstRate / 100)).toFixed(2) : totalAmt.toFixed(2);
+    const cgstAmt    = enableGST && taxAmt > 0 ? (taxAmt / 2).toFixed(2) : '0.00';
+    const sgstAmt    = cgstAmt;
+    const paymentLabel = order.payment_method === 'cod' ? 'Cash on Delivery'
+        : order.payment_method === 'upi' ? 'UPI'
+        : order.payment_method === 'cashfree' ? 'Cashfree'
+        : order.payment_method || 'N/A';
+
+    // Variant label from store config
+    const getSizeLabel = (sizeId, variationId) => {
+        const cats = storeInfo?.config?.products?.categories || [];
+        for (const cat of cats) {
+            for (const prod of cat.products || []) {
+                for (const v of prod.variations || []) {
+                    if (String(v.id) === String(variationId)) {
+                        const sz = (v.sizes || []).find(s => String(s.id) === String(sizeId));
+                        if (sz) return `${v.name}${sz.size ? ' / ' + sz.size + (sz.unit || '') : ''}`;
+                    }
+                }
+            }
+        }
+        return item => item.variant || item.size || '—';
+    };
 
     // Amount in words
     const amountInWords = (num) => {
         const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
         const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-        if (num === 0) return 'Zero';
         const convert = (n) => {
             if (n < 20) return ones[n];
             if (n < 100) return tens[Math.floor(n/10)] + (n%10 ? ' ' + ones[n%10] : '');
@@ -81,296 +103,229 @@ const OrderBill = () => {
             return convert(Math.floor(n/10000000)) + ' Crore' + (n%10000000 ? ' ' + convert(n%10000000) : '');
         };
         const rupees = Math.floor(num);
-        const paise = Math.round((num - rupees) * 100);
+        const paise  = Math.round((num - rupees) * 100);
         return convert(rupees) + ' Rupees' + (paise ? ' and ' + convert(paise) + ' Paise' : '') + ' Only';
     };
 
-    // Get size label from store config
-    const getSizeLabel = (sizeId, variationId) => {
+    const getSizeLabelForItem = (item) => {
         const cats = storeInfo?.config?.products?.categories || [];
         for (const cat of cats) {
             for (const prod of cat.products || []) {
                 for (const v of prod.variations || []) {
-                    if (String(v.id) === String(variationId)) {
-                        const sz = (v.sizes || []).find(s => String(s.id) === String(sizeId));
-                        if (sz) return `${v.name}${sz.size ? ' / ' + sz.size + (sz.unit ? sz.unit : '') : ''}`;
+                    if (String(v.id) === String(item.variationId)) {
+                        const sz = (v.sizes || []).find(s => String(s.id) === String(item.sizeId));
+                        if (sz) return `${v.name}${sz.size ? ' / ' + sz.size + (sz.unit || '') : ''}`;
                     }
                 }
             }
         }
-        return '—';
+        return item.variant || item.size || '—';
     };
-    const gstRate = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
-    const cgstRate = gstRate / 2;
-    const sgstRate = gstRate / 2;
-    const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
-    const storeTagline = storeInfo?.config?.brand?.tagline || '';
 
     return (
         <>
-            {/* Print / action bar — hidden on print */}
-            <div style={styles.actionBar} className="no-print">
-                <button onClick={() => navigate(-1)} style={styles.backBtn}>← Back</button>
-                <div style={styles.actionRight}>
-                    <button onClick={handlePrint} style={styles.printBtn}>🖨 Print / Save as PDF</button>
-                </div>
+            {/* Action bar — hidden on print */}
+            <div className="no-print" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 20px', background:'#fff', borderBottom:'1px solid #e0e3e6', position:'sticky', top:0, zIndex:100 }}>
+                <button onClick={() => navigate(-1)} style={{ padding:'7px 16px', background:'#f0f2f5', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13 }}>← Back</button>
+                <button onClick={() => window.print()} style={{ padding:'7px 22px', background:'#191c1e', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🖨️ Print Invoice</button>
             </div>
 
-            {/* Bill */}
-            <div ref={printRef} style={styles.bill}>
+            {/* Invoice page */}
+            <div className="page">
 
-                {/* Header */}
-                <div style={styles.header}>
-                    {storeLogo && <img src={storeLogo} alt={storeName} style={{height:'60px',objectFit:'contain',marginBottom:'8px'}} />}
-                    <div style={styles.storeName}>{storeName}</div>
-                    {storeAddress && <div style={styles.storeDetail}>{storeAddress}</div>}
-                    {storePhone && <div style={styles.storeDetail}>📞 {storePhone}</div>}
-                    {storeEmail && <div style={styles.storeDetail}>✉ {storeEmail}</div>}
-                    {storeGST && <div style={styles.storeDetail}>GSTIN: {storeGST}</div>}
-                    {storePAN && <div style={styles.storeDetail}>PAN: {storePAN}</div>}
-                </div>
-
-                <div style={styles.divider} />
-
-                {/* Bill title */}
-                <div style={styles.billTitle}>TAX INVOICE</div>
-                <div style={{textAlign:'center', fontSize:11, color:'#556067', marginBottom:4}}>Original for Recipient</div>
-                {!storeGST && <div style={{textAlign:'center', fontSize:11, color:'#e74c3c', marginBottom:8}}>⚠️ GSTIN not configured — add it in Step 3 (Cart Settings)</div>}
-
-                {/* Order info */}
-                <div style={styles.infoGrid}>
-                    <div>
-                        <div style={styles.infoLabel}>Invoice No.</div>
-                        <div style={styles.infoValue}>{invoiceNumber}</div>
-                        <div style={{fontSize:11, color:'#888', marginTop:2}}>Order: #{(order.order_id || order.id || '').slice(-8)}</div>
-                    </div>
-                    <div style={{textAlign:'right'}}>
-                        <div style={styles.infoLabel}>Order Date</div>
-                        <div style={styles.infoValue}>{orderDate}</div>
-                    </div>
-                    <div>
-                        <div style={styles.infoLabel}>Payment Method</div>
-                        <div style={styles.infoValue}>
-                            {order.payment_method === 'upi' ? 'UPI' :
-                             order.payment_method === 'cod' ? 'Cash on Delivery' :
-                             order.payment_method === 'cashfree' ? 'Cashfree' :
-                             order.payment_method || 'N/A'}
+                {/* STORE HEADER: logo | name+address | TAX INVOICE */}
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:6 }}>
+                    {storeLogo && <img src={storeLogo} alt={storeName} style={{ height:40, width:40, objectFit:'contain', flexShrink:0 }} />}
+                    <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:800, lineHeight:1.2 }}>{storeName}</div>
+                        <div style={{ fontSize:8, color:'#556067', marginTop:2, lineHeight:1.6 }}>
+                            {storeAddress && <>{storeAddress}<br/></>}
+                            {storePhone && <>📞 {storePhone}&nbsp;&nbsp;</>}{storeEmail && <>✉ {storeEmail}<br/></>}
+                            {storeGST && <>GSTIN: {storeGST}&nbsp;&nbsp;</>}{storePAN && <>PAN: {storePAN}</>}
                         </div>
                     </div>
-                    <div style={{textAlign:'right'}}>
-                        <div style={styles.infoLabel}>Status</div>
-                        <div style={{...styles.infoValue, textTransform:'uppercase', fontWeight:700}}>
-                            {(order.status || '').replace(/_/g, ' ')}
-                        </div>
-                    </div>
-                    <div>
-                        <div style={styles.infoLabel}>Place of Supply</div>
-                        <div style={styles.infoValue}>{storeState || 'N/A'}</div>
-                    </div>
-                    <div style={{textAlign:'right'}}>
-                        <div style={styles.infoLabel}>Reverse Charge</div>
-                        <div style={styles.infoValue}>No</div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                        <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, color:'#191c1e' }}>TAX INVOICE</div>
+                        <div style={{ fontSize:7.5, color:'#8e9eab', marginTop:2 }}>Original for Recipient</div>
+                        {!storeGST && <div style={{ fontSize:7, color:'#e74c3c', marginTop:3 }}>⚠️ GSTIN not set</div>}
                     </div>
                 </div>
 
-                <div style={styles.divider} />
+                <div className="divider" />
 
-                {/* Customer & Delivery */}
-                <div style={styles.infoGrid}>
+                {/* META GRID: 3-column */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'4px 10px', marginBottom:5 }}>
                     <div>
-                        <div style={styles.sectionTitle}>Bill To</div>
-                        <div style={styles.infoValue}>{order.customer_name || 'Customer'}</div>
-                        {order.customer_phone && <div style={styles.infoSmall}>📞 {order.customer_phone}</div>}
-                        {order.customer_email && <div style={styles.infoSmall}>✉ {order.customer_email}</div>}
+                        <div className="lbl">Invoice No.</div>
+                        <div className="val">{invoiceNo}</div>
+                        <div className="sub">Order: #{(order.order_id || order.id || '').slice(-8)}</div>
                     </div>
-                    {order.order_type === 'dine_in' ? (
-                        <div style={{textAlign:'right'}}>
-                            <div style={styles.sectionTitle}>Order Type</div>
-                            <div style={styles.infoValue}>🍽️ {dineInLabel}</div>
-                        </div>
-                    ) : addr.addressLine1 && (
-                        <div style={{textAlign:'right'}}>
-                            <div style={styles.sectionTitle}>Deliver To</div>
-                            <div style={styles.infoValue}>{addr.recipientName || order.customer_name}</div>
-                            {addr.recipientMobile && <div style={styles.infoSmall}>📞 {addr.recipientMobile}</div>}
-                            <div style={styles.infoSmall}>{addr.addressLine1}{addr.addressLine2 ? ', ' + addr.addressLine2 : ''}</div>
-                            <div style={styles.infoSmall}>{addr.city}, {addr.state} - {addr.pincode}</div>
-                            {addr.landmark && <div style={styles.infoSmall}>Landmark: {addr.landmark}</div>}
-                        </div>
-                    )}
+                    <div>
+                        <div className="lbl">Payment</div>
+                        <div className="val">{paymentLabel}</div>
+                    </div>
+                    <div>
+                        <div className="lbl">Place of Supply</div>
+                        <div className="val">{storeState || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="lbl">Date</div>
+                        <div className="val">{orderDate}</div>
+                    </div>
+                    <div>
+                        <div className="lbl">Status</div>
+                        <div className="val" style={{ textTransform:'uppercase' }}>{(order.status || '').replace(/_/g, ' ')}</div>
+                    </div>
+                    <div>
+                        <div className="lbl">Reverse Charge</div>
+                        <div className="val">No</div>
+                    </div>
                 </div>
 
-                <div style={styles.divider} />
+                <div className="divider" />
 
-                {/* Items Table */}
-                <div style={styles.sectionTitle}>Order Items</div>
-                <table style={styles.table}>
+                {/* BILL TO + SHIP TO */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'5px 0' }}>
+                    <div>
+                        <div className="lbl">Bill To</div>
+                        <div className="val">{order.customer_name || 'Customer'}</div>
+                        {order.customer_phone && <div className="sub">📞 {order.customer_phone}</div>}
+                        {order.customer_email && <div className="sub">✉ {order.customer_email}</div>}
+                    </div>
+                    <div>
+                        {order.order_type === 'dine_in' ? (
+                            <>
+                                <div className="lbl">Order Type</div>
+                                <div className="val">🍽️ {dineInLabel}</div>
+                            </>
+                        ) : addr.addressLine1 ? (
+                            <>
+                                <div className="lbl">Ship To</div>
+                                <div className="val">{addr.recipientName || order.customer_name}</div>
+                                {addr.recipientMobile && <div className="sub">📞 {addr.recipientMobile}</div>}
+                                <div className="sub">{addr.addressLine1}{addr.addressLine2 ? ', ' + addr.addressLine2 : ''}</div>
+                                <div className="sub">{addr.city}, {addr.state} {addr.pincode}</div>
+                                {addr.landmark && <div className="sub">Landmark: {addr.landmark}</div>}
+                            </>
+                        ) : null}
+                    </div>
+                </div>
+
+                <div className="divider" />
+
+                {/* ITEMS TABLE */}
+                <table style={{ width:'100%', borderCollapse:'collapse', marginTop:4 }}>
                     <thead>
-                        <tr style={styles.tableHead}>
-                            <th style={{...styles.th, textAlign:'left', width:'40%'}}>Item</th>
-                            <th style={{...styles.th, textAlign:'center'}}>HSN/SAC</th>
-                            <th style={{...styles.th, textAlign:'center'}}>Variant</th>
-                            <th style={{...styles.th, textAlign:'right'}}>Taxable Value</th>
-                            <th style={{...styles.th, textAlign:'center'}}>Qty</th>
-                            <th style={{...styles.th, textAlign:'right'}}>Price</th>
-                            <th style={{...styles.th, textAlign:'right'}}>Subtotal</th>
+                        <tr>
+                            <th className="th" style={{ textAlign:'left' }}>Item</th>
+                            <th className="th" style={{ textAlign:'center' }}>HSN/SAC</th>
+                            <th className="th" style={{ textAlign:'center' }}>Variant</th>
+                            <th className="th" style={{ textAlign:'right' }}>Taxable Value</th>
+                            <th className="th" style={{ textAlign:'center' }}>Qty</th>
+                            <th className="th" style={{ textAlign:'right' }}>Price</th>
+                            <th className="th" style={{ textAlign:'right' }}>CGST</th>
+                            <th className="th" style={{ textAlign:'right' }}>SGST</th>
+                            <th className="th" style={{ textAlign:'right' }}>Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {items.length > 0 ? items.map((item, idx) => (
-                            <tr key={idx} style={{borderBottom:'1px solid #f0f0f0'}}>
-                                <td style={styles.td}>
-                                <div style={{display:'flex', alignItems:'center', gap:10}}>
-                                    {item.image || item.product_image ? (
-                                        <img src={item.image || item.product_image} alt={item.name} style={{width:40, height:40, objectFit:'cover', borderRadius:6, flexShrink:0}} />
-                                    ) : (
-                                        <div style={{width:40, height:40, background:'#f2f4f7', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0}}>📦</div>
-                                    )}
-                                    <span>{item.name || item.product_name || 'Item'}</span>
-                                </div>
-                            </td>
-                                <td style={{...styles.td, textAlign:'center', fontSize:12, color:'#666'}}>{hsnCode || '—'}</td>
-                                <td style={{...styles.td, textAlign:'center', fontSize:12, color:'#666'}}>
-                                    {storeInfo ? getSizeLabel(item.sizeId, item.variationId) : (item.variant || item.size || '—')}
-                                </td>
-                                <td style={{...styles.td, textAlign:'right', fontSize:12}}>
-                                    ₹{enableGST && gstRate > 0
-                                        ? (Number((item.price || 0) * (item.quantity || 1)) / (1 + gstRate/100)).toFixed(2)
-                                        : Number((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-                                </td>
-                                <td style={{...styles.td, textAlign:'center'}}>{item.quantity || item.qty || 1}</td>
-                                <td style={{...styles.td, textAlign:'right'}}>₹{Number(item.price || item.unit_price || 0).toLocaleString('en-IN')}</td>
-                                <td style={{...styles.td, textAlign:'right', fontWeight:600}}>
-                                    ₹{Number((item.price || item.unit_price || 0) * (item.quantity || item.qty || 1)).toLocaleString('en-IN')}
-                                </td>
-                            </tr>
-                        )) : (
-                            <tr><td colSpan={5} style={{...styles.td, textAlign:'center', color:'#999'}}>No items</td></tr>
+                        {items.length > 0 ? items.map((item, idx) => {
+                            const itemTotal    = Number(item.price || item.unit_price || 0) * Number(item.quantity || item.qty || 1);
+                            const itemTaxable  = enableGST && gstRate > 0 ? (itemTotal / (1 + gstRate / 100)).toFixed(2) : itemTotal.toFixed(2);
+                            const itemCgst     = enableGST && gstRate > 0 ? ((itemTotal - parseFloat(itemTaxable)) / 2).toFixed(2) : '0.00';
+                            const itemSgst     = itemCgst;
+                            const variantLabel = storeInfo ? getSizeLabelForItem(item) : (item.variant || item.size || '—');
+                            return (
+                                <tr key={idx} style={{ borderBottom:'1px solid #f2f4f7' }}>
+                                    <td className="td">
+                                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                            {item.image || item.product_image
+                                                ? <img src={item.image || item.product_image} alt={item.name} style={{ width:26, height:26, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
+                                                : <div style={{ width:26, height:26, background:'#f2f4f7', borderRadius:3, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, flexShrink:0 }}>📦</div>
+                                            }
+                                            <span style={{ fontSize:8 }}>{item.name || item.product_name || 'Item'}</span>
+                                        </div>
+                                    </td>
+                                    <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{hsnCode || '—'}</td>
+                                    <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{variantLabel}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:8 }}>₹{itemTaxable}</td>
+                                    <td className="td" style={{ textAlign:'center', fontSize:8 }}>{item.quantity || item.qty || 1}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:8 }}>₹{Number(item.price || item.unit_price || 0).toFixed(2)}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{cgstRate}%<br/>₹{itemCgst}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{sgstRate}%<br/>₹{itemSgst}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:8, fontWeight:700 }}>₹{itemTotal.toFixed(2)}</td>
+                                </tr>
+                            );
+                        }) : (
+                            <tr><td colSpan={9} style={{ padding:'8px', textAlign:'center', color:'#999', fontSize:12 }}>No items</td></tr>
                         )}
                     </tbody>
                 </table>
 
-                {/* Totals */}
-                <div style={styles.totalsWrap}>
-                    {enableGST && order.tax_amount > 0 && (
+                {/* TOTALS */}
+                <div style={{ marginTop:4 }}>
+                    {enableGST && taxAmt > 0 && (
                         <>
-                            <div style={styles.totalRow}>
-                                <span>Taxable Amount</span>
-                                <span>₹{(Number(order.total_amount) / (1 + gstRate/100)).toFixed(2)}</span>
-                            </div>
-                            <div style={styles.totalRow}>
-                                <span>CGST @ {cgstRate}%</span>
-                                <span>₹{(Number(order.tax_amount) / 2).toFixed(2)}</span>
-                            </div>
-                            <div style={styles.totalRow}>
-                                <span>SGST @ {sgstRate}%</span>
-                                <span>₹{(Number(order.tax_amount) / 2).toFixed(2)}</span>
-                            </div>
+                            <div className="totals-row"><span>Taxable Amount</span><span>₹{taxableAmt}</span></div>
+                            <div className="totals-row"><span>CGST @ {cgstRate}%</span><span>₹{cgstAmt}</span></div>
+                            <div className="totals-row"><span>SGST @ {sgstRate}%</span><span>₹{sgstAmt}</span></div>
                         </>
                     )}
-                    {order.delivery_charge > 0 && (
-                        <div style={styles.totalRow}>
-                            <span>Delivery Charge</span>
-                            <span>₹{Number(order.delivery_charge).toLocaleString('en-IN')}</span>
-                        </div>
+                    {Number(order.delivery_charge) > 0
+                        ? <div className="totals-row"><span>Delivery</span><span>₹{Number(order.delivery_charge).toFixed(2)}</span></div>
+                        : <div className="totals-row"><span>Delivery</span><span style={{ color:'#16a34a' }}>FREE</span></div>
+                    }
+                    {Number(order.discount_amount) > 0 && (
+                        <div className="totals-row" style={{ color:'#e74c3c' }}><span>Discount</span><span>-₹{Number(order.discount_amount).toFixed(2)}</span></div>
                     )}
-                    {order.discount_amount > 0 && (
-                        <div style={{...styles.totalRow, color:'#e74c3c'}}>
-                            <span>Discount</span>
-                            <span>-₹{Number(order.discount_amount).toLocaleString('en-IN')}</span>
-                        </div>
-                    )}
-                    <div style={styles.divider} />
-                    <div style={styles.grandTotal}>
-                        <span>TOTAL AMOUNT</span>
-                        <span>₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                    {order.payment_method === 'cod' && (
-                        <div style={{...styles.totalRow, color:'#e67e22', fontWeight:600, marginTop:6}}>
-                            <span>Amount to Collect (COD)</span>
-                            <span>₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</span>
-                        </div>
-                    )}
+                    <div className="grand"><span>TOTAL</span><span>₹{totalAmt.toFixed(2)}</span></div>
                 </div>
 
-                {/* UPI info */}
+                <div style={{ fontSize:'7.5px', color:'#556067', fontStyle:'italic', borderTop:'1px dashed #d1d5db', paddingTop:4, marginTop:5 }}>
+                    <strong>Amount in Words:</strong> {amountInWords(totalAmt)}
+                </div>
+
+                {/* UPI note */}
                 {order.payment_method === 'upi' && order.customer_upi_id && (
-                    <div style={styles.upiBox}>
-                        <strong>UPI Payment Details</strong>
-                        <div>UPI ID: {order.customer_upi_id}</div>
-                        <div style={{fontSize:11, color:'#666', marginTop:4}}>
-                            Please verify ₹{Number(order.total_amount).toLocaleString('en-IN')} received from this UPI ID before dispatching.
-                        </div>
+                    <div style={{ background:'#fff8e1', border:'1px solid #ffc107', borderRadius:6, padding:'6px 10px', fontSize:'7.5px', marginTop:8 }}>
+                        <strong>UPI Payment:</strong> {order.customer_upi_id} — verify ₹{totalAmt.toFixed(2)} received before dispatching.
                     </div>
                 )}
 
-                {/* Amount in words */}
-                <div style={{fontSize:12, color:'#556067', marginTop:8, fontStyle:'italic', borderTop:'1px dashed #e0e3e6', paddingTop:8}}>
-                    <strong>Amount in Words:</strong> {amountInWords(Number(order.total_amount || 0))}
-                </div>
-
-                {/* Authorized signatory */}
-                <div style={{display:'flex', justifyContent:'flex-end', marginTop:24, paddingTop:16}}>
-                    <div style={{textAlign:'center'}}>
-                        <div style={{borderTop:'1px solid #556067', paddingTop:4, fontSize:11, color:'#556067', width:160}}>
-                            Authorized Signatory
-                        </div>
-                        <div style={{fontSize:11, color:'#556067', marginTop:2}}>{storeName}</div>
+                {/* Footer + Signatory */}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginTop:8 }}>
+                    <div style={{ fontSize:7, color:'#8e9eab' }}>
+                        Thank you for your order!<br/>
+                        This is a computer generated invoice. Powered by AapnaEstore · aapnaestore.com
                     </div>
-                </div>
-
-                {/* Footer */}
-                <div style={styles.divider} />
-                <div style={styles.footer}>
-                    <div>Thank you for your order! 🎉</div>
-                    <div style={{fontSize:10, color:'#999', marginTop:4}}>
-                        This is a computer generated invoice. For queries contact {storeName}.
-                    </div>
-                    <div style={{fontSize:10, color:'#999', marginTop:2}}>
-                        Powered by AapnaEstore · aapnaestore.com
+                    <div style={{ textAlign:'center', borderTop:'1px solid #556067', paddingTop:3, fontSize:'7.5px', color:'#556067', width:90 }}>
+                        Authorized Signatory<br/>{storeName}
                     </div>
                 </div>
 
             </div>
 
-            {/* Print styles */}
             <style>{`
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { font-family: Arial, sans-serif; color: #191c1e; background: #f5f6fa; }
+                .page { width: 148mm; min-height: 210mm; padding: 8mm; background: #fff; margin: 16px auto; box-shadow: 0 2px 20px rgba(0,0,0,0.10); border-radius: 4px; }
+                .divider { border-top: 1px solid #e5e7eb; margin: 5px 0; }
+                .lbl { font-size: 7px; font-weight: 700; text-transform: uppercase; color: #8e9eab; letter-spacing: .4px; margin-bottom: 1px; }
+                .val { font-size: 8.5px; font-weight: 600; color: #191c1e; }
+                .sub { font-size: 7.5px; color: #556067; margin-top: 1px; line-height: 1.4; }
+                .th { font-size: 7px; font-weight: 700; text-transform: uppercase; color: #556067; padding: 3px 4px; border-bottom: 1.5px solid #d1d5db; white-space: nowrap; }
+                .td { border-bottom: 1px solid #f2f4f7; vertical-align: middle; padding: 3px 4px; }
+                .totals-row { display: flex; justify-content: flex-end; gap: 40px; font-size: 8px; color: #556067; padding: 1.5px 0; }
+                .grand { display: flex; justify-content: flex-end; gap: 40px; font-size: 10px; font-weight: 800; color: #006d2f; padding-top: 4px; border-top: 1.5px solid #006d2f; margin-top: 3px; }
                 @media print {
+                    @page { size: A5 portrait; margin: 6mm; }
+                    body { background: #fff; }
                     .no-print { display: none !important; }
-                    body { margin: 0; padding: 0; }
-                    @page { size: A4; margin: 10mm; }
+                    .page { width: 100%; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
                 }
             `}</style>
         </>
     );
-};
-
-const styles = {
-    center: { display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', fontSize:16, color:'#666' },
-    actionBar: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 24px', background:'#fff', borderBottom:'1px solid #e0e3e6', position:'sticky', top:0, zIndex:100 },
-    backBtn: { padding:'8px 16px', background:'#f0f2f5', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:600, fontSize:13 },
-    actionRight: { display:'flex', gap:10 },
-    printBtn: { padding:'8px 20px', background:'#006d2f', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:700, fontSize:13 },
-    bill: { maxWidth:700, margin:'24px auto', padding:'32px', background:'#fff', boxShadow:'0 2px 20px rgba(0,0,0,0.08)', borderRadius:12, fontFamily:'Arial, sans-serif' },
-    header: { textAlign:'center', marginBottom:12 },
-    storeName: { fontSize:24, fontWeight:800, color:'#191c1e', marginBottom:4 },
-    storeDetail: { fontSize:12, color:'#666', marginBottom:2 },
-    divider: { borderTop:'1px solid #e0e3e6', margin:'16px 0' },
-    billTitle: { textAlign:'center', fontSize:14, fontWeight:700, letterSpacing:3, color:'#556067', marginBottom:16 },
-    infoGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:8 },
-    infoLabel: { fontSize:10, color:'#8e9eab', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5, marginBottom:3 },
-    infoValue: { fontSize:14, color:'#191c1e', fontWeight:600 },
-    infoSmall: { fontSize:12, color:'#556067', marginTop:2 },
-    sectionTitle: { fontSize:11, fontWeight:700, color:'#8e9eab', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 },
-    table: { width:'100%', borderCollapse:'collapse', marginBottom:4 },
-    tableHead: { background:'#f8f9fb', borderBottom:'2px solid #e0e3e6' },
-    th: { padding:'10px 8px', fontSize:11, fontWeight:700, color:'#556067', textTransform:'uppercase', letterSpacing:0.5 },
-    td: { padding:'10px 8px', fontSize:13, color:'#191c1e', verticalAlign:'middle' },
-    totalsWrap: { marginLeft:'auto', width:280, marginTop:8 },
-    totalRow: { display:'flex', justifyContent:'space-between', fontSize:13, color:'#556067', marginBottom:4 },
-    grandTotal: { display:'flex', justifyContent:'space-between', fontSize:16, fontWeight:800, color:'#006d2f', marginTop:4 },
-    upiBox: { background:'#fff8e1', border:'1px solid #ffc107', borderRadius:8, padding:'10px 14px', fontSize:12, marginTop:12 },
-    footer: { textAlign:'center', fontSize:12, color:'#556067', marginTop:8 },
 };
 
 export default OrderBill;
