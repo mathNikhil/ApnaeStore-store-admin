@@ -77,13 +77,19 @@ const ThermalBill = () => {
                     <span>{new Date(order.created_at).toLocaleDateString('en-IN')}</span>
                 </div>
                 <div style={{ fontSize: '11px' }}>Time: {new Date(order.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
-                {(order.customer_name || order.customer_phone) && <div style={{ fontSize: '11px' }}>Customer: {order.customer_name || order.customer_phone}</div>}
                 {order.order_type === 'dine_in' ? (
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: 2 }}>🍽️ {dineInLabel}</div>
+                    <>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: 2 }}>🍽️ {dineInLabel}</div>
+                        {order.dine_in_customer_name && <div style={{ fontSize: '11px' }}>Guest: {order.dine_in_customer_name}</div>}
+                        {order.dine_in_customer_mobile && <div style={{ fontSize: '11px' }}>Mobile: {order.dine_in_customer_mobile}</div>}
+                    </>
                 ) : (
-                    (addr.recipientMobile || order.customer_phone) && <div style={{ fontSize: '11px' }}>Mobile: {addr.recipientMobile || order.customer_phone}</div>
+                    <>
+                        {(order.customer_name || order.customer_phone) && <div style={{ fontSize: '11px' }}>Customer: {order.customer_name || order.customer_phone}</div>}
+                        {(addr.recipientMobile || order.customer_phone) && <div style={{ fontSize: '11px' }}>Mobile: {addr.recipientMobile || order.customer_phone}</div>}
+                        {addr.recipientName && <div style={{ fontSize: '11px' }}>Name: {addr.recipientName}</div>}
+                    </>
                 )}
-                {addr.recipientName && <div style={{ fontSize: '11px' }}>Name: {addr.recipientName}</div>}
                 {addr.addressLine1 && <div style={{ fontSize: '11px' }}>Address: {addr.addressLine1}{addr.addressLine2 ? ', ' + addr.addressLine2 : ''}</div>}
                 {(addr.city || addr.pincode) && <div style={{ fontSize: '11px' }}>{[addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')}</div>}
                 <div style={{ textAlign: 'center', fontSize: '11px', marginTop: 4 }}>{line}</div>
