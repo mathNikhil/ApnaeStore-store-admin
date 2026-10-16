@@ -48,8 +48,9 @@ const App = () => {
     const urlSubdomain = params.get('store');
     const storedSubdomain = localStorage.getItem('currentStoreSubdomain');
     const isThermalPage = window.location.pathname.includes('/thermal');
-    // Restore session from URL params on thermal page
-    if (isThermalPage) {
+    const isBillPage = window.location.pathname.includes('/bill');
+    // Restore session from URL params on thermal and bill pages
+    if (isThermalPage || isBillPage) {
         const tp = new URLSearchParams(window.location.search);
         if (tp.get('t')) localStorage.setItem('storeAdminToken', tp.get('t'));
         if (tp.get('storeId')) localStorage.setItem('currentStoreId', tp.get('storeId'));

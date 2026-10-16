@@ -203,8 +203,10 @@ const OrderDetail = () => {
                                 const billId = order.id || id;
                                 const qs = window.location.search;
                                 const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
+                                const storeIdForBill = localStorage.getItem('currentStoreId') || '';
+                                const tToken = localStorage.getItem('storeAdminToken') || '';
                                 const sep = qs ? '&' : '?';
-                                window.open(`/orders/${billId}/bill${qs}${sep}subdomain=${subdomain}`, '_blank');
+                                window.open(`/orders/${billId}/bill${qs}${sep}subdomain=${subdomain}&storeId=${storeIdForBill}&t=${tToken}`, '_blank');
                             }}
                             style={{padding:'8px 16px', background:'#006d2f', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'700', fontSize:'13px'}}
                         >
