@@ -122,12 +122,84 @@ const OrderBill = () => {
         return item.variant || item.size || '—';
     };
 
+    const printThermal = () => {
+        const guestName = order.order_type === 'dine_in' && order.dine_in_customer_name
+            ? order.dine_in_customer_name
+            : order.customer_name || 'Customer';
+        const guestPhone = order.order_type === 'dine_in' && order.dine_in_customer_mobile
+            ? order.dine_in_customer_mobile
+            : order.customer_phone || '';
+
+        const itemRows = items.map(item => {
+            const qty   = Number(item.quantity || item.qty || 1);
+            const price = Number(item.price || item.unit_price || 0);
+            const total = (qty * price).toFixed(2);
+            return `<tr>
+                <td style="padding:1px 2px;font-size:11px;">${item.name || 'Item'}</td>
+                <td style="padding:1px 2px;font-size:11px;text-align:center;">${qty}</td>
+                <td style="padding:1px 2px;font-size:11px;text-align:right;">&#8377;${total}</td>
+            </tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html><html><head>
+            <meta charset="utf-8"/>
+            <title>Receipt</title>
+            <style>
+                @page { size: 80mm auto; margin: 4mm; }
+                * { margin:0; padding:0; box-sizing:border-box; }
+                body { font-family: 'Courier New', monospace; width: 72mm; font-size: 12px; color: #000; }
+                .center { text-align: center; }
+                .bold { font-weight: bold; }
+                .divider { border-top: 1px dashed #000; margin: 4px 0; }
+                .row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+                .total-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; padding: 2px 0; border-top: 1px solid #000; margin-top: 3px; }
+                table { width: 100%; border-collapse: collapse; }
+                th { font-size: 10px; text-align: left; border-bottom: 1px solid #000; padding: 2px; }
+                th:nth-child(2) { text-align: center; }
+                th:nth-child(3) { text-align: right; }
+            </style>
+        </head><body>
+            <div class="center bold" style="font-size:15px;">${storeName}</div>
+            ${storeAddress ? `<div class="center" style="font-size:10px;">${storeAddress}</div>` : ''}
+            ${storePhone ? `<div class="center" style="font-size:10px;">Ph: ${storePhone}</div>` : ''}
+            ${storeGST ? `<div class="center" style="font-size:10px;">GSTIN: ${storeGST}</div>` : ''}
+            <div class="divider"></div>
+            <div class="row"><span>Bill No:</span><span>${invoiceNo}</span></div>
+            <div class="row"><span>Date:</span><span>${orderDate}</span></div>
+            <div class="row"><span>Order Type:</span><span>${order.order_type === 'dine_in' ? dineInLabel : 'Delivery'}</span></div>
+            ${order.order_type === 'dine_in' ? `<div class="row"><span>Guest:</span><span>${guestName}</span></div>${guestPhone ? `<div class="row"><span>Phone:</span><span>${guestPhone}</span></div>` : ''}` : `<div class="row"><span>Customer:</span><span>${guestName}</span></div>${guestPhone ? `<div class="row"><span>Phone:</span><span>${guestPhone}</span></div>` : ''}`}
+            <div class="divider"></div>
+            <table>
+                <thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amt</th></tr></thead>
+                <tbody>${itemRows}</tbody>
+            </table>
+            <div class="divider"></div>
+            ${Number(order.delivery_charge) > 0 ? `<div class="row"><span>Delivery</span><span>&#8377;${Number(order.delivery_charge).toFixed(2)}</span></div>` : ''}
+            ${enableGST && taxAmt > 0 ? `<div class="row"><span>CGST @ ${cgstRate}%</span><span>&#8377;${cgstAmt}</span></div><div class="row"><span>SGST @ ${sgstRate}%</span><span>&#8377;${sgstAmt}</span></div>` : ''}
+            <div class="total-row"><span>TOTAL</span><span>&#8377;${totalAmt.toFixed(2)}</span></div>
+            <div class="row" style="margin-top:2px;"><span>Payment:</span><span>${paymentLabel}</span></div>
+            <div class="divider"></div>
+            <div class="center" style="font-size:10px;margin-top:4px;">Thank you! Visit again.</div>
+            <div class="center" style="font-size:9px;color:#555;margin-top:2px;">Powered by AapnaEstore</div>
+            <br/><br/><br/>
+        </body></html>`;
+
+        const w = window.open('', '_blank', 'width=320,height=600');
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); w.close(); }, 400);
+    };
+
     return (
         <>
             {/* Action bar — hidden on print */}
             <div className="no-print" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 20px', background:'#fff', borderBottom:'1px solid #e0e3e6', position:'sticky', top:0, zIndex:100 }}>
                 <button onClick={() => navigate(-1)} style={{ padding:'7px 16px', background:'#f0f2f5', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13 }}>← Back</button>
-                <button onClick={() => window.print()} style={{ padding:'7px 22px', background:'#191c1e', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🖨️ Print Invoice</button>
+                <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={printThermal} style={{ padding:'7px 18px', background:'#0f5132', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🧾 Thermal Bill</button>
+                    <button onClick={() => window.print()} style={{ padding:'7px 22px', background:'#191c1e', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🖨️ Tax Invoice</button>
+                </div>
             </div>
 
             {/* Invoice page */}
