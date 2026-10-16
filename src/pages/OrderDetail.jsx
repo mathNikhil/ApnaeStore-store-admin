@@ -357,6 +357,13 @@ const OrderDetail = () => {
                         <div style={styles.infoRow}><strong>Name:</strong> {order.customer_name}</div>
                         <div style={styles.infoRow}><strong>Email:</strong> {order.customer_email}</div>
                         <div style={styles.infoRow}><strong>Phone:</strong> {order.customer_phone}</div>
+                        {order.order_type === 'dine_in' && order.dine_in_customer_name && (
+                            <div style={{marginTop:8, padding:'8px 10px', background:'#fff8e1', borderRadius:6, border:'1px solid #ffc107'}}>
+                                <div style={{fontSize:11, fontWeight:700, color:'#8a4a00', marginBottom:4}}>🍽️ Dine-In Guest</div>
+                                <div style={styles.infoRow}><strong>Name:</strong> {order.dine_in_customer_name}</div>
+                                {order.dine_in_customer_mobile && <div style={styles.infoRow}><strong>Phone:</strong> {order.dine_in_customer_mobile}</div>}
+                            </div>
+                        )}
                     </div>
 
                     <div style={styles.card}>

@@ -188,8 +188,14 @@ const OrderBill = () => {
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, margin:'5px 0' }}>
                     <div>
                         <div className="lbl">Bill To</div>
-                        <div className="val">{order.customer_name || 'Customer'}</div>
-                        {order.customer_phone && <div className="sub">📞 {order.customer_phone}</div>}
+                        <div className="val">
+                            {order.order_type === 'dine_in' && order.dine_in_customer_name
+                                ? order.dine_in_customer_name
+                                : order.customer_name || 'Customer'}
+                        </div>
+                        {order.order_type === 'dine_in' && order.dine_in_customer_mobile
+                            ? <div className="sub">📞 {order.dine_in_customer_mobile}</div>
+                            : order.customer_phone && <div className="sub">📞 {order.customer_phone}</div>}
                         {order.customer_email && <div className="sub">✉ {order.customer_email}</div>}
                     </div>
                     <div>
