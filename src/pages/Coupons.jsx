@@ -1,7 +1,10 @@
-// v2
+// v3
 import React, { useState, useEffect, useCallback } from 'react';
 import { storeAdminAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+const getToken = () => localStorage.getItem('storeAdminToken');
 
 /* ─── helpers ─────────────────────────────────────────────── */
 function statusBadge(status) {
@@ -69,6 +72,12 @@ const Coupons = () => {
     const [saving, setSaving]         = useState(false);
     const [formErr, setFormErr]       = useState('');
 
+    // Product/category catalog for scope selector
+    const [catalogProducts, setCatalogProducts] = useState([]);
+    const [catalogCategories, setCatalogCategories] = useState([]);
+    const [catalogLoading, setCatalogLoading] = useState(false);
+    const [catalogSearch, setCatalogSearch] = useState('');
+
     // Confirm delete
     const [deleteId, setDeleteId] = useState(null);
 
@@ -100,6 +109,7 @@ const Coupons = () => {
         setEditId(null);
         setForm({ ...EMPTY_FORM, code: autoCode() });
         setFormErr('');
+        setCatalogSearch('');
         setDrawerOpen(true);
     };
 
@@ -122,24 +132,60 @@ const Coupons = () => {
             end_at:   row.end_at   ? row.end_at.slice(0, 16)   : '',
         });
         setFormErr('');
+        setCatalogSearch('');
         setDrawerOpen(true);
     };
 
+    /* fetch product catalog for scope selector */
+    const fetchCatalog = useCallback(async (sid) => {
+        if (!sid) return;
+        setCatalogLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/products?storeId=${sid}`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                setCatalogProducts(data.data);
+                // Extract unique categories
+                const cats = [...new Set(data.data.map(p => p.category).filter(Boolean))].sort();
+                setCatalogCategories(cats);
+            }
+        } catch (e) { console.error('catalog fetch failed', e); }
+        finally { setCatalogLoading(false); }
+    }, []);
+
+    useEffect(() => {
+        if (storeId) fetchCatalog(storeId);
+    }, [storeId, fetchCatalog]);
+
     /* form field helper */
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    /* toggle a scope_item (product id string or category string) */
+    const toggleScopeItem = (item) => {
+        setForm(f => {
+            const existing = f.scope_items || [];
+            return {
+                ...f,
+                scope_items: existing.includes(item)
+                    ? existing.filter(i => i !== item)
+                    : [...existing, item],
+            };
+        });
+    };
 
     /* save */
     const handleSave = async () => {
         setFormErr('');
         if (!form.name.trim())  return setFormErr('Name is required');
+        if (form.codeMode === 'manual' && !form.code.trim()) return setFormErr('Code is required');
         if (!form.start_at)     return setFormErr('Start date is required');
         if (!form.end_at)       return setFormErr('End date is required');
         if (new Date(form.end_at) <= new Date(form.start_at))
             return setFormErr('End date must be after start date');
 
-        const code = form.type === 'coupon'
-            ? (form.codeMode === 'auto' ? autoCode() : form.code.trim().toUpperCase())
-            : form.name.trim().toUpperCase().replace(/\s+/g, '');
+        const code = form.codeMode === 'auto' ? autoCode() : form.code.trim().toUpperCase();
 
         const payload = {
             name:            form.name.trim(),
@@ -341,38 +387,37 @@ const Coupons = () => {
                                 ))}
                             </div>
 
-                            {/* Code — only for coupons */}
-                            {form.type === 'coupon' && (
-                                <>
-                                    <Label>Coupon Code</Label>
-                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-                                        {['auto','manual'].map(m => (
-                                            <button key={m} onClick={() => set('codeMode', m)}
-                                                style={{
-                                                    padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', fontSize: '12px',
-                                                    borderColor: form.codeMode === m ? '#006d2f' : '#e2e8f0',
-                                                    background:  form.codeMode === m ? '#f0fdf4' : '#fff',
-                                                    color:       form.codeMode === m ? '#006d2f' : '#64748b',
-                                                }}>
-                                                {m === 'auto' ? 'Auto-generate' : 'Set manually'}
-                                            </button>
-                                        ))}
+                            {/* Code — for both coupons and promos */}
+                            <>
+                                <Label>{form.type === 'coupon' ? 'Coupon Code' : 'Promo Code'}</Label>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                                    {['auto','manual'].map(m => (
+                                        <button key={m} onClick={() => set('codeMode', m)}
+                                            style={{
+                                                padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', fontSize: '12px',
+                                                borderColor: form.codeMode === m ? '#006d2f' : '#e2e8f0',
+                                                background:  form.codeMode === m ? '#f0fdf4' : '#fff',
+                                                color:       form.codeMode === m ? '#006d2f' : '#64748b',
+                                            }}>
+                                            {m === 'auto' ? 'Auto-generate' : 'Set manually'}
+                                        </button>
+                                    ))}
+                                </div>
+                                {form.codeMode === 'manual' ? (
+                                    <input value={form.code} onChange={e => set('code', e.target.value.toUpperCase())}
+                                        placeholder={form.type === 'coupon' ? 'e.g. DIWALI20' : 'e.g. FLAT50OFF'}
+                                        style={{ ...input, fontFamily: 'monospace', letterSpacing: '1px' }} />
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                        <code style={{ flex: 1, background: '#f1f5f9', padding: '10px 12px', borderRadius: '8px', fontFamily: 'monospace', letterSpacing: '2px', fontSize: '14px', color: '#1e293b' }}>
+                                            {form.code || '—'}
+                                        </code>
+                                        <button onClick={() => set('code', autoCode())} style={{ padding: '8px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
+                                            Regenerate
+                                        </button>
                                     </div>
-                                    {form.codeMode === 'manual' ? (
-                                        <input value={form.code} onChange={e => set('code', e.target.value.toUpperCase())}
-                                            placeholder="e.g. DIWALI20" style={{ ...input, fontFamily: 'monospace', letterSpacing: '1px' }} />
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                            <code style={{ flex: 1, background: '#f1f5f9', padding: '10px 12px', borderRadius: '8px', fontFamily: 'monospace', letterSpacing: '2px', fontSize: '14px', color: '#1e293b' }}>
-                                                {form.code || '—'}
-                                            </code>
-                                            <button onClick={() => set('code', autoCode())} style={{ padding: '8px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
-                                                Regenerate
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
+                                )}
+                            </>
 
                             {/* Unit */}
                             <Label>Discount Type *</Label>
@@ -418,14 +463,110 @@ const Coupons = () => {
 
                             {/* Scope */}
                             <Label>Applies To</Label>
-                            <select value={form.scope} onChange={e => set('scope', e.target.value)} style={{ ...input, cursor: 'pointer' }}>
+                            <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, scope_items: [] }))} style={{ ...input, cursor: 'pointer' }}>
                                 <option value="full_store">Full Store (all products)</option>
                                 <option value="product">Specific Products</option>
                                 <option value="category">Specific Categories</option>
                             </select>
                             {(form.scope === 'product' || form.scope === 'category') && (
-                                <div style={{ marginBottom: '16px', padding: '10px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '12px', color: '#92400e' }}>
-                                    ⚠️ Scope filtering by specific {form.scope === 'product' ? 'products' : 'categories'} — add IDs when you integrate with your product catalog.
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
+                                        Select {form.scope === 'product' ? 'Products' : 'Categories'} *
+                                    </div>
+
+                                    {/* Selected tags */}
+                                    {(form.scope_items || []).length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                                            {(form.scope_items || []).map(item => (
+                                                <span key={item} style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                    background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0',
+                                                    borderRadius: '20px', padding: '3px 10px', fontSize: '12px', fontWeight: '600',
+                                                }}>
+                                                    {form.scope === 'product'
+                                                        ? (catalogProducts.find(p => String(p.id) === String(item))?.name || item)
+                                                        : item}
+                                                    <button onClick={() => toggleScopeItem(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#15803d', fontSize: '14px' }}>×</button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Search within catalog */}
+                                    <input
+                                        value={catalogSearch}
+                                        onChange={e => setCatalogSearch(e.target.value)}
+                                        placeholder={`Search ${form.scope === 'product' ? 'products' : 'categories'}…`}
+                                        style={{ ...input, marginBottom: '6px' }}
+                                    />
+
+                                    {/* Catalog list */}
+                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto', background: '#fff' }}>
+                                        {catalogLoading ? (
+                                            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading…</div>
+                                        ) : form.scope === 'product' ? (
+                                            (() => {
+                                                const filtered = catalogProducts.filter(p =>
+                                                    !catalogSearch || p.name?.toLowerCase().includes(catalogSearch.toLowerCase())
+                                                );
+                                                return filtered.length === 0 ? (
+                                                    <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No products found</div>
+                                                ) : filtered.map(p => {
+                                                    const selected = (form.scope_items || []).includes(String(p.id));
+                                                    return (
+                                                        <div key={p.id} onClick={() => toggleScopeItem(String(p.id))}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '10px',
+                                                                padding: '9px 12px', cursor: 'pointer', fontSize: '13px',
+                                                                borderBottom: '1px solid #f8fafc',
+                                                                background: selected ? '#f0fdf4' : '#fff',
+                                                                color: selected ? '#15803d' : '#374151',
+                                                            }}
+                                                            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fdf4' : '#fff'; }}>
+                                                            <span style={{ fontSize: '14px' }}>{selected ? '☑' : '☐'}</span>
+                                                            <div>
+                                                                <div style={{ fontWeight: selected ? '700' : '500' }}>{p.name}</div>
+                                                                {p.category && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{p.category}</div>}
+                                                            </div>
+                                                            {p.price && <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748b' }}>₹{Number(p.price).toLocaleString()}</span>}
+                                                        </div>
+                                                    );
+                                                });
+                                            })()
+                                        ) : (
+                                            (() => {
+                                                const filtered = catalogCategories.filter(c =>
+                                                    !catalogSearch || c.toLowerCase().includes(catalogSearch.toLowerCase())
+                                                );
+                                                return filtered.length === 0 ? (
+                                                    <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No categories found</div>
+                                                ) : filtered.map(cat => {
+                                                    const selected = (form.scope_items || []).includes(cat);
+                                                    const count = catalogProducts.filter(p => p.category === cat).length;
+                                                    return (
+                                                        <div key={cat} onClick={() => toggleScopeItem(cat)}
+                                                            style={{
+                                                                display: 'flex', alignItems: 'center', gap: '10px',
+                                                                padding: '9px 12px', cursor: 'pointer', fontSize: '13px',
+                                                                borderBottom: '1px solid #f8fafc',
+                                                                background: selected ? '#f0fdf4' : '#fff',
+                                                                color: selected ? '#15803d' : '#374151',
+                                                            }}
+                                                            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fdf4' : '#fff'; }}>
+                                                            <span style={{ fontSize: '14px' }}>{selected ? '☑' : '☐'}</span>
+                                                            <div style={{ fontWeight: selected ? '700' : '500' }}>{cat}</div>
+                                                            <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{count} product{count !== 1 ? 's' : ''}</span>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()
+                                        )}
+                                    </div>
+                                    {(form.scope_items || []).length === 0 && (
+                                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Select at least one {form.scope === 'product' ? 'product' : 'category'}</div>
+                                    )}
                                 </div>
                             )}
 
