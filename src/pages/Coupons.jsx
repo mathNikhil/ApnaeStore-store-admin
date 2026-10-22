@@ -77,6 +77,7 @@ const Coupons = () => {
     const [catalogCategories, setCatalogCategories] = useState([]);
     const [catalogLoading, setCatalogLoading] = useState(false);
     const [catalogSearch, setCatalogSearch] = useState('');
+    const [expandedProduct, setExpandedProduct] = useState(null);
 
     // Confirm delete
     const [deleteId, setDeleteId] = useState(null);
@@ -147,7 +148,7 @@ const Coupons = () => {
             const data = await res.json();
             const rows = data.inventory || data.data || [];
             if (Array.isArray(rows) && rows.length > 0) {
-                // Group inventory rows into products: { id, name, category, variations: [{variationId, variationName, sizes:[{sizeId,sizeLabel}]}] }
+                // Group into: { id, name, category, image, variations:[{ variationId, variationName, image, sizes:[{sizeId,sizeLabel,inventoryId}] }] }
                 const productMap = {};
                 for (const row of rows) {
                     const pid = row.product_id;
@@ -156,23 +157,27 @@ const Coupons = () => {
                             id: pid,
                             name: row.product_name,
                             category: row.category_name,
+                            image: row.image_url || null,
                             variations: {},
                         };
                     }
+                    // Use first image found for the product
+                    if (!productMap[pid].image && row.image_url) productMap[pid].image = row.image_url;
                     const vid = row.variation_id;
                     if (!productMap[pid].variations[vid]) {
                         productMap[pid].variations[vid] = {
                             variationId: vid,
                             variationName: row.variation_name,
+                            image: row.image_url || null,
                             sizes: [],
                         };
                     }
-                    if (row.size_label) {
-                        productMap[pid].variations[vid].sizes.push({
-                            sizeId: row.size_id,
-                            sizeLabel: row.size_label,
-                        });
-                    }
+                    productMap[pid].variations[vid].sizes.push({
+                        sizeId: row.size_id,
+                        sizeLabel: row.size_label || 'Default',
+                        inventoryId: row.id,
+                        price: row.price,
+                    });
                 }
                 const products = Object.values(productMap).map(p => ({
                     ...p,
@@ -193,7 +198,7 @@ const Coupons = () => {
     /* form field helper */
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-    /* toggle a scope_item (product id string or category string) */
+    /* toggle a scope_item (any string key: pid, category, or pid:vid:sid) */
     const toggleScopeItem = (item) => {
         setForm(f => {
             const existing = f.scope_items || [];
@@ -202,6 +207,52 @@ const Coupons = () => {
                 scope_items: existing.includes(item)
                     ? existing.filter(i => i !== item)
                     : [...existing, item],
+            };
+        });
+    };
+
+    /* check if ALL sizes of a variation are selected */
+    const isVariationFullySelected = (pid, variation) => {
+        const items = form.scope_items || [];
+        return variation.sizes.every(s => items.includes(`${pid}:${variation.variationId}:${s.sizeId}`));
+    };
+
+    /* toggle all sizes of a variation at once */
+    const toggleVariation = (pid, variation) => {
+        const allKeys = variation.sizes.map(s => `${pid}:${variation.variationId}:${s.sizeId}`);
+        const allSelected = isVariationFullySelected(pid, variation);
+        setForm(f => {
+            const existing = f.scope_items || [];
+            return {
+                ...f,
+                scope_items: allSelected
+                    ? existing.filter(i => !allKeys.includes(i))
+                    : [...new Set([...existing, ...allKeys])],
+            };
+        });
+    };
+
+    /* check if ALL variants+sizes of a product are selected */
+    const isProductFullySelected = (product) => {
+        const items = form.scope_items || [];
+        return product.variations.every(v =>
+            v.sizes.every(s => items.includes(`${product.id}:${v.variationId}:${s.sizeId}`))
+        );
+    };
+
+    /* toggle entire product */
+    const toggleProduct = (product) => {
+        const allKeys = product.variations.flatMap(v =>
+            v.sizes.map(s => `${product.id}:${v.variationId}:${s.sizeId}`)
+        );
+        const allSelected = isProductFullySelected(product);
+        setForm(f => {
+            const existing = f.scope_items || [];
+            return {
+                ...f,
+                scope_items: allSelected
+                    ? existing.filter(i => !allKeys.includes(i))
+                    : [...new Set([...existing, ...allKeys])],
             };
         });
     };
@@ -502,72 +553,135 @@ const Coupons = () => {
                             {(form.scope === 'product' || form.scope === 'category') && (
                                 <div style={{ marginBottom: '16px' }}>
                                     <div style={{ fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
-                                        Select {form.scope === 'product' ? 'Products' : 'Categories'} *
+                                        Select {form.scope === 'product' ? 'Products / Variants / Sizes' : 'Categories'} *
                                     </div>
 
-                                    {/* Selected tags */}
+                                    {/* Selected summary chips */}
                                     {(form.scope_items || []).length > 0 && (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-                                            {(form.scope_items || []).map(item => (
-                                                <span key={item} style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                    background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0',
-                                                    borderRadius: '20px', padding: '3px 10px', fontSize: '12px', fontWeight: '600',
-                                                }}>
-                                                    {form.scope === 'product'
-                                                        ? (catalogProducts.find(p => String(p.id) === String(item))?.name || `Product #${item}`)
-                                                        : item}
-                                                    <button onClick={() => toggleScopeItem(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#15803d', fontSize: '14px' }}>×</button>
-                                                </span>
-                                            ))}
+                                        <div style={{ marginBottom: '10px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px', color: '#15803d', fontWeight: '600' }}>
+                                            ✓ {form.scope_items.length} {form.scope === 'product' ? 'variant/size' : 'categor'}{form.scope_items.length !== 1 ? (form.scope === 'product' ? 's' : 'ies') : (form.scope === 'product' ? '' : 'y')} selected
+                                            <button onClick={() => setForm(f => ({ ...f, scope_items: [] }))} style={{ marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: '11px', fontWeight: '600' }}>Clear all</button>
                                         </div>
                                     )}
 
-                                    {/* Search within catalog */}
+                                    {/* Search */}
                                     <input
                                         value={catalogSearch}
                                         onChange={e => setCatalogSearch(e.target.value)}
-                                        placeholder={`Search ${form.scope === 'product' ? 'products' : 'categories'}…`}
+                                        placeholder={`Search ${form.scope === 'product' ? 'products or variants' : 'categories'}…`}
                                         style={{ ...input, marginBottom: '6px' }}
                                     />
 
                                     {/* Catalog list */}
-                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '260px', overflowY: 'auto', background: '#fff' }}>
+                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '320px', overflowY: 'auto', background: '#fff' }}>
                                         {catalogLoading ? (
-                                            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading…</div>
+                                            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading products…</div>
                                         ) : form.scope === 'product' ? (
                                             (() => {
+                                                const q = catalogSearch.toLowerCase();
                                                 const filtered = catalogProducts.filter(p =>
-                                                    !catalogSearch ||
-                                                    p.name?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                                                    p.category?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                                                    p.variations?.some(v => v.variationName?.toLowerCase().includes(catalogSearch.toLowerCase()))
+                                                    !q ||
+                                                    p.name?.toLowerCase().includes(q) ||
+                                                    p.category?.toLowerCase().includes(q) ||
+                                                    p.variations?.some(v => v.variationName?.toLowerCase().includes(q))
                                                 );
                                                 return filtered.length === 0 ? (
                                                     <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No products found</div>
                                                 ) : filtered.map(p => {
-                                                    const selected = (form.scope_items || []).includes(String(p.id));
-                                                    // Build variation+size summary
-                                                    const varSummary = p.variations?.map(v => {
-                                                        const sizes = v.sizes?.filter(s => s.sizeLabel).map(s => s.sizeLabel).join(', ');
-                                                        return sizes ? `${v.variationName} (${sizes})` : v.variationName;
-                                                    }).filter(Boolean).join(' · ');
+                                                    const fullySelected = isProductFullySelected(p);
+                                                    const partiallySelected = !fullySelected && p.variations.some(v =>
+                                                        v.sizes.some(s => (form.scope_items||[]).includes(`${p.id}:${v.variationId}:${s.sizeId}`))
+                                                    );
+                                                    const isExpanded = expandedProduct === p.id;
                                                     return (
-                                                        <div key={p.id} onClick={() => toggleScopeItem(String(p.id))}
-                                                            style={{
-                                                                display: 'flex', alignItems: 'flex-start', gap: '10px',
-                                                                padding: '10px 12px', cursor: 'pointer', fontSize: '13px',
-                                                                borderBottom: '1px solid #f8fafc',
-                                                                background: selected ? '#f0fdf4' : '#fff',
-                                                            }}
-                                                            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fdf4' : '#fff'; }}>
-                                                            <span style={{ fontSize: '15px', marginTop: '1px', flexShrink: 0 }}>{selected ? '☑' : '☐'}</span>
-                                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontWeight: selected ? '700' : '600', color: selected ? '#15803d' : '#1e293b' }}>{p.name}</div>
-                                                                {p.category && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>{p.category}</div>}
-                                                                {varSummary && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', fontStyle: 'italic' }}>{varSummary}</div>}
+                                                        <div key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                            {/* Product row */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px' }}>
+                                                                {/* Product image */}
+                                                                <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                                                                    {p.image
+                                                                        ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display='none'; }} />
+                                                                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📦</div>
+                                                                    }
+                                                                </div>
+                                                                {/* Product name + category */}
+                                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                                    <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{p.name}</div>
+                                                                    {p.category && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{p.category}</div>}
+                                                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                                                        {p.variations.length} variant{p.variations.length !== 1 ? 's' : ''}
+                                                                    </div>
+                                                                </div>
+                                                                {/* Select all checkbox */}
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', color: '#64748b', userSelect: 'none' }}>
+                                                                        <input type="checkbox"
+                                                                            checked={fullySelected}
+                                                                            ref={el => { if (el) el.indeterminate = partiallySelected; }}
+                                                                            onChange={() => toggleProduct(p)}
+                                                                            style={{ accentColor: '#006d2f', width: '14px', height: '14px' }}
+                                                                        />
+                                                                        All
+                                                                    </label>
+                                                                    <button onClick={() => setExpandedProduct(isExpanded ? null : p.id)}
+                                                                        style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>
+                                                                        {isExpanded ? '▲ Hide' : '▼ Pick'}
+                                                                    </button>
+                                                                </div>
                                                             </div>
+
+                                                            {/* Expanded: variations + sizes */}
+                                                            {isExpanded && (
+                                                                <div style={{ borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
+                                                                    {p.variations.map(v => {
+                                                                        const varFull = isVariationFullySelected(p.id, v);
+                                                                        const varPartial = !varFull && v.sizes.some(s => (form.scope_items||[]).includes(`${p.id}:${v.variationId}:${s.sizeId}`));
+                                                                        return (
+                                                                            <div key={v.variationId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                                                {/* Variation header */}
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px 8px 20px' }}>
+                                                                                    {v.image
+                                                                                        ? <img src={v.image} alt={v.variationName} style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} onError={e => { e.target.style.display='none'; }} />
+                                                                                        : <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: '#e2e8f0', flexShrink: 0 }} />
+                                                                                    }
+                                                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151', flex: 1 }}>{v.variationName}</span>
+                                                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', color: '#64748b', userSelect: 'none' }}>
+                                                                                        <input type="checkbox"
+                                                                                            checked={varFull}
+                                                                                            ref={el => { if (el) el.indeterminate = varPartial; }}
+                                                                                            onChange={() => toggleVariation(p.id, v)}
+                                                                                            style={{ accentColor: '#006d2f', width: '13px', height: '13px' }}
+                                                                                        />
+                                                                                        All sizes
+                                                                                    </label>
+                                                                                </div>
+                                                                                {/* Sizes */}
+                                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 12px 10px 56px' }}>
+                                                                                    {v.sizes.map(s => {
+                                                                                        const key = `${p.id}:${v.variationId}:${s.sizeId}`;
+                                                                                        const checked = (form.scope_items||[]).includes(key);
+                                                                                        return (
+                                                                                            <label key={s.sizeId} style={{
+                                                                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                                                                padding: '3px 10px', borderRadius: '20px', cursor: 'pointer',
+                                                                                                border: `1px solid ${checked ? '#006d2f' : '#e2e8f0'}`,
+                                                                                                background: checked ? '#f0fdf4' : '#fff',
+                                                                                                fontSize: '12px', fontWeight: checked ? '700' : '500',
+                                                                                                color: checked ? '#006d2f' : '#374151', userSelect: 'none',
+                                                                                            }}>
+                                                                                                <input type="checkbox" checked={checked} onChange={() => toggleScopeItem(key)}
+                                                                                                    style={{ display: 'none' }} />
+                                                                                                {s.sizeLabel}
+                                                                                                {s.price && <span style={{ fontSize: '10px', color: checked ? '#15803d' : '#94a3b8', marginLeft: '2px' }}>₹{Number(s.price).toLocaleString()}</span>}
+                                                                                            </label>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 });
