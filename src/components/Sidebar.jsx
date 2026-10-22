@@ -66,6 +66,8 @@ const Sidebar = ({ onToggle }) => {
         { path: '/couriers', icon: '🚚', label: 'Couriers' },
         { path: '/reports', icon: '📈', label: 'Reports' },
         { path: '/staff', icon: '👥', label: 'Staff' },
+        { path: '/returns', icon: '↩️', label: 'Returns' },
+        { path: '/coupons', icon: '🏷️', label: 'Coupons & Promos' },
     ];
 
     React.useEffect(() => {

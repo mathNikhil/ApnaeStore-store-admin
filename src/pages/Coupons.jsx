@@ -1,6 +1,7 @@
+// v2
 import React, { useState, useEffect, useCallback } from 'react';
 import { storeAdminAPI } from '../services/api';
-import Sidebar from './Sidebar';
+import Sidebar from '../components/Sidebar';
 
 /* ─── helpers ─────────────────────────────────────────────── */
 function statusBadge(status) {
@@ -517,3 +518,4 @@ const btnSm = {
 };
 
 export default Coupons;
+
