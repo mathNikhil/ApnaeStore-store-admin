@@ -136,19 +136,50 @@ const Coupons = () => {
         setDrawerOpen(true);
     };
 
-    /* fetch product catalog for scope selector */
+    /* fetch product catalog from inventory (store-admin-authenticated) */
     const fetchCatalog = useCallback(async (sid) => {
         if (!sid) return;
         setCatalogLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/products?storeId=${sid}`, {
+            const res = await fetch(`${API_BASE_URL}/api/store/${sid}/inventory`, {
                 headers: { 'Authorization': `Bearer ${getToken()}` }
             });
             const data = await res.json();
-            if (data.success && Array.isArray(data.data)) {
-                setCatalogProducts(data.data);
-                // Extract unique categories
-                const cats = [...new Set(data.data.map(p => p.category).filter(Boolean))].sort();
+            const rows = data.inventory || data.data || [];
+            if (Array.isArray(rows) && rows.length > 0) {
+                // Group inventory rows into products: { id, name, category, variations: [{variationId, variationName, sizes:[{sizeId,sizeLabel}]}] }
+                const productMap = {};
+                for (const row of rows) {
+                    const pid = row.product_id;
+                    if (!productMap[pid]) {
+                        productMap[pid] = {
+                            id: pid,
+                            name: row.product_name,
+                            category: row.category_name,
+                            variations: {},
+                        };
+                    }
+                    const vid = row.variation_id;
+                    if (!productMap[pid].variations[vid]) {
+                        productMap[pid].variations[vid] = {
+                            variationId: vid,
+                            variationName: row.variation_name,
+                            sizes: [],
+                        };
+                    }
+                    if (row.size_label) {
+                        productMap[pid].variations[vid].sizes.push({
+                            sizeId: row.size_id,
+                            sizeLabel: row.size_label,
+                        });
+                    }
+                }
+                const products = Object.values(productMap).map(p => ({
+                    ...p,
+                    variations: Object.values(p.variations),
+                }));
+                setCatalogProducts(products);
+                const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
                 setCatalogCategories(cats);
             }
         } catch (e) { console.error('catalog fetch failed', e); }
@@ -484,7 +515,7 @@ const Coupons = () => {
                                                     borderRadius: '20px', padding: '3px 10px', fontSize: '12px', fontWeight: '600',
                                                 }}>
                                                     {form.scope === 'product'
-                                                        ? (catalogProducts.find(p => String(p.id) === String(item))?.name || item)
+                                                        ? (catalogProducts.find(p => String(p.id) === String(item))?.name || `Product #${item}`)
                                                         : item}
                                                     <button onClick={() => toggleScopeItem(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#15803d', fontSize: '14px' }}>×</button>
                                                 </span>
@@ -501,35 +532,42 @@ const Coupons = () => {
                                     />
 
                                     {/* Catalog list */}
-                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto', background: '#fff' }}>
+                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '260px', overflowY: 'auto', background: '#fff' }}>
                                         {catalogLoading ? (
                                             <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading…</div>
                                         ) : form.scope === 'product' ? (
                                             (() => {
                                                 const filtered = catalogProducts.filter(p =>
-                                                    !catalogSearch || p.name?.toLowerCase().includes(catalogSearch.toLowerCase())
+                                                    !catalogSearch ||
+                                                    p.name?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                                                    p.category?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                                                    p.variations?.some(v => v.variationName?.toLowerCase().includes(catalogSearch.toLowerCase()))
                                                 );
                                                 return filtered.length === 0 ? (
                                                     <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No products found</div>
                                                 ) : filtered.map(p => {
                                                     const selected = (form.scope_items || []).includes(String(p.id));
+                                                    // Build variation+size summary
+                                                    const varSummary = p.variations?.map(v => {
+                                                        const sizes = v.sizes?.filter(s => s.sizeLabel).map(s => s.sizeLabel).join(', ');
+                                                        return sizes ? `${v.variationName} (${sizes})` : v.variationName;
+                                                    }).filter(Boolean).join(' · ');
                                                     return (
                                                         <div key={p.id} onClick={() => toggleScopeItem(String(p.id))}
                                                             style={{
-                                                                display: 'flex', alignItems: 'center', gap: '10px',
-                                                                padding: '9px 12px', cursor: 'pointer', fontSize: '13px',
+                                                                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                                                                padding: '10px 12px', cursor: 'pointer', fontSize: '13px',
                                                                 borderBottom: '1px solid #f8fafc',
                                                                 background: selected ? '#f0fdf4' : '#fff',
-                                                                color: selected ? '#15803d' : '#374151',
                                                             }}
                                                             onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
                                                             onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fdf4' : '#fff'; }}>
-                                                            <span style={{ fontSize: '14px' }}>{selected ? '☑' : '☐'}</span>
-                                                            <div>
-                                                                <div style={{ fontWeight: selected ? '700' : '500' }}>{p.name}</div>
-                                                                {p.category && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{p.category}</div>}
+                                                            <span style={{ fontSize: '15px', marginTop: '1px', flexShrink: 0 }}>{selected ? '☑' : '☐'}</span>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{ fontWeight: selected ? '700' : '600', color: selected ? '#15803d' : '#1e293b' }}>{p.name}</div>
+                                                                {p.category && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>{p.category}</div>}
+                                                                {varSummary && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', fontStyle: 'italic' }}>{varSummary}</div>}
                                                             </div>
-                                                            {p.price && <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748b' }}>₹{Number(p.price).toLocaleString()}</span>}
                                                         </div>
                                                     );
                                                 });
