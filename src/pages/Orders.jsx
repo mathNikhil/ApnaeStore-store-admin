@@ -285,7 +285,14 @@ const Orders = () => {
                                             </div>
                                         ) : '—'}
                                     </td>
-                                    <td style={styles.td}>₹{Number(order.total_amount).toLocaleString()}</td>
+                                    <td style={styles.td}>
+                                        <div>₹{Number(order.total_amount).toLocaleString()}</div>
+                                        {order.coupon_code && (
+                                            <div style={{fontSize:'11px', color:'#16a34a', marginTop:'2px'}}>
+                                                🏷️ {order.coupon_code} −₹{Number(order.discount_amount).toLocaleString()}
+                                            </div>
+                                        )}
+                                    </td>
                                     <td style={styles.td}><span className={getStatusClass(order.status)}>{getStatusLabel(order.status)}</span></td>
                                     <td style={{...styles.td, fontSize:'13px'}}>{new Date(order.created_at).toLocaleString()}</td>
                                     <td style={styles.td}>

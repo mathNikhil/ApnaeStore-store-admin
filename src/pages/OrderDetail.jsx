@@ -459,6 +459,13 @@ const OrderDetail = () => {
                                         <td style={{color:'#666',fontSize:'13px',padding:'4px 8px',textAlign:'right'}}>₹{Number(order.tax_amount).toLocaleString()}</td>
                                     </tr>
                                 )}
+                                {order.coupon_code && Number(order.discount_amount) > 0 && (
+                                    <tr>
+                                        <td style={{color:'#16a34a',fontSize:'13px',padding:'4px 8px'}}>🏷️ Coupon ({order.coupon_code})</td>
+                                        <td></td><td></td>
+                                        <td style={{color:'#16a34a',fontSize:'13px',padding:'4px 8px',textAlign:'right'}}>−₹{Number(order.discount_amount).toLocaleString()}</td>
+                                    </tr>
+                                )}
                                 <tr style={{borderTop:'2px solid #f0f2f5',background:'#f8f9fa'}}>
                                     <td colSpan="3" style={{padding:'12px 8px',fontWeight:'700',fontSize:'15px'}}>Grand Total</td>
                                     <td style={{padding:'12px 8px',fontWeight:'700',fontSize:'15px',textAlign:'right',color:'#2ecc71'}}>₹{Number(order.total_amount).toLocaleString()}</td>
