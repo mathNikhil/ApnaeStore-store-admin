@@ -80,6 +80,9 @@ const Sidebar = () => {
                 <Link to="/returns" style={{...styles.navLink, ...styles[isActive('/returns')]}}>
                     <span style={styles.icon}>↩️</span><span>Returns</span>
                 </Link>
+                <Link to="/coupons" style={{...styles.navLink, ...styles[isActive('/coupons')]}}>
+                    <span style={styles.icon}>🎟️</span><span>Coupons & Promos</span>
+                </Link>
             </nav>
             <button onClick={handleLogout} style={styles.logoutBtn}>🚪 <span>Logout</span></button>
         </div>

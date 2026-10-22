@@ -99,6 +99,22 @@ export const storeAdminAPI = {
         const query = new URLSearchParams(params).toString();
         return apiRequest(`/api/store/${storeId}/admin/customers?${query}`);
     },
+
+    // Coupons & Promos
+    getCoupons: (storeId, params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return apiRequest(`/api/store/${storeId}/admin/coupons?${query}`);
+    },
+    getCoupon: (storeId, id) =>
+        apiRequest(`/api/store/${storeId}/admin/coupons/${id}`),
+    createCoupon: (storeId, data) =>
+        apiRequest(`/api/store/${storeId}/admin/coupons`, 'POST', data),
+    updateCoupon: (storeId, id, data) =>
+        apiRequest(`/api/store/${storeId}/admin/coupons/${id}`, 'PUT', data),
+    deleteCoupon: (storeId, id) =>
+        apiRequest(`/api/store/${storeId}/admin/coupons/${id}`, 'DELETE'),
+    disableCoupon: (storeId, id) =>
+        apiRequest(`/api/store/${storeId}/admin/coupons/${id}/disable`, 'POST'),
 };
 
 // ✅ Store Admin auth — password-only, no OTP, no separate username. The

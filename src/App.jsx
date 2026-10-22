@@ -14,6 +14,7 @@ import Couriers from './pages/Couriers';
 import Returns from './pages/Returns';
 import Inventory from './pages/Inventory';
 import ReturnDetail from './pages/ReturnDetail';
+import Coupons from './pages/Coupons';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -148,6 +149,7 @@ const App = () => {
                 <Route path="/returns" element={isAuthenticated ? <Returns /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/returns/:id" element={isAuthenticated ? <ReturnDetail /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/inventory" element={isAuthenticated ? <Inventory /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/coupons" element={isAuthenticated ? <Coupons /> : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
         </BrowserRouter>
