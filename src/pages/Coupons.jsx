@@ -55,6 +55,7 @@ const EMPTY_FORM = {
     min_order_value: '', max_uses: '',
     scope: 'full_store', scope_items: [],
     start_at: '', end_at: '',
+    applicable_to: 'both',
 };
 
 /* ─── main component ──────────────────────────────────────── */
@@ -131,6 +132,7 @@ const Coupons = () => {
             scope_items: row.scope_items ?? [],
             start_at: row.start_at ? row.start_at.slice(0, 16) : '',
             end_at:   row.end_at   ? row.end_at.slice(0, 16)   : '',
+            applicable_to: row.applicable_to ?? 'both',
         });
         setFormErr('');
         setCatalogSearch('');
@@ -285,6 +287,7 @@ const Coupons = () => {
             scope_items:     form.scope_items,
             start_at:        new Date(form.start_at).toISOString(),
             end_at:          new Date(form.end_at).toISOString(),
+            applicable_to:   form.applicable_to || 'both',
         };
 
         setSaving(true);
@@ -721,6 +724,31 @@ const Coupons = () => {
                                     )}
                                 </div>
                             )}
+
+                            {/* Applicable To */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <Label>Applicable On</Label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {[
+                                        { value: 'both', label: '🛍️ Both (Dine-in & Delivery)' },
+                                        { value: 'delivery', label: '🚚 Delivery Only' },
+                                        { value: 'dine_in', label: '🍽️ Dine-in Only' },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => set('applicable_to', opt.value)}
+                                            style={{
+                                                flex: 1, padding: '8px 6px', borderRadius: '8px', cursor: 'pointer',
+                                                border: `2px solid ${form.applicable_to === opt.value ? '#6366f1' : '#e2e8f0'}`,
+                                                background: form.applicable_to === opt.value ? '#eef2ff' : '#fff',
+                                                color: form.applicable_to === opt.value ? '#4338ca' : '#64748b',
+                                                fontSize: '12px', fontWeight: '600', textAlign: 'center',
+                                            }}
+                                        >{opt.label}</button>
+                                    ))}
+                                </div>
+                            </div>
 
                             {/* Dates */}
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
