@@ -27,6 +27,7 @@ const Inventory = () => {
     const [dineInLabel, setDineInLabel] = useState('Dine In');
     const [qrActive, setQrActive] = useState(false);
     const [showPrintQR, setShowPrintQR] = useState(false);
+    const [uploadResult, setUploadResult] = useState(null);
 
     useEffect(() => {
         fetchInventory();
@@ -132,14 +133,16 @@ const Inventory = () => {
         } catch (e) { console.error(e); }
     };
 
-    const handleUploadCSV = async (e) => {
+    const handleUploadXLSX = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const text = await file.text();
+        const formData = new FormData();
+        formData.append('file', file);
         try {
-            const res = await fetch(`${API}/api/store/${storeId}/inventory/upload-csv`, {
-                method: 'POST', headers: hdrs,
-                body: JSON.stringify({ csvData: text })
+            const res = await fetch(`${API}/api/store/${storeId}/inventory/upload-xlsx`, {
+                method: 'POST',
+                headers: { Authorization: hdrs.Authorization }, // no Content-Type — let browser set multipart boundary
+                body: formData,
             });
             const data = await res.json();
             setUploadResult(data);
@@ -195,6 +198,10 @@ const Inventory = () => {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button onClick={handleSync} disabled={syncing} style={styles.btnSecondary}>{syncing ? 'Syncing...' : '🔄 Sync'}</button>
                         <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download XLSX</button>
+                        <label style={{...styles.btnSecondary, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4}}>
+                            ⬆️ Upload XLSX
+                            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleUploadXLSX} />
+                        </label>
                         <button onClick={handleDownloadTallyCSV} style={{...styles.btnSecondary, borderColor:'#0066cc', color:'#0066cc'}}>📊 Download for Tally</button>
                         {qrActive && (
                             <button
@@ -208,6 +215,16 @@ const Inventory = () => {
                 </div>
 
                 {/* Upload Result */}
+                {uploadResult && (
+                    <div style={{ background: uploadResult.success ? '#f0fdf4' : '#fef2f2', border: `1px solid ${uploadResult.success ? '#86efac' : '#fca5a5'}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 14, color: uploadResult.success ? '#15803d' : '#dc2626' }}>
+                            {uploadResult.success
+                                ? `✅ Upload complete — ${uploadResult.updated} rows updated, ${uploadResult.skipped} skipped${uploadResult.errors?.length ? `, ${uploadResult.errors.length} errors` : ''}`
+                                : `❌ Upload failed: ${uploadResult.error}`}
+                        </span>
+                        <button onClick={() => setUploadResult(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, color: '#666' }}>×</button>
+                    </div>
+                )}
 
                 {/* Summary Cards */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 16 }}>
