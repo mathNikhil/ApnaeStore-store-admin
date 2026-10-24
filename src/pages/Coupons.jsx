@@ -540,37 +540,43 @@ const Coupons = () => {
                                 ))}
                             </div>
 
-                            {/* Code — for both coupons and promos */}
-                            <>
-                                <Label>{form.type === 'coupon' ? 'Coupon Code' : 'Promo Code'}</Label>
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-                                    {['auto','manual'].map(m => (
-                                        <button key={m} onClick={() => set('codeMode', m)}
-                                            style={{
-                                                padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', fontSize: '12px',
-                                                borderColor: form.codeMode === m ? '#006d2f' : '#e2e8f0',
-                                                background:  form.codeMode === m ? '#f0fdf4' : '#fff',
-                                                color:       form.codeMode === m ? '#006d2f' : '#64748b',
-                                            }}>
-                                            {m === 'auto' ? 'Auto-generate' : 'Set manually'}
-                                        </button>
-                                    ))}
-                                </div>
-                                {form.codeMode === 'manual' ? (
-                                    <input value={form.code} onChange={e => set('code', e.target.value.toUpperCase())}
-                                        placeholder={form.type === 'coupon' ? 'e.g. DIWALI20' : 'e.g. FLAT50OFF'}
-                                        style={{ ...input, fontFamily: 'monospace', letterSpacing: '1px' }} />
-                                ) : (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                        <code style={{ flex: 1, background: '#f1f5f9', padding: '10px 12px', borderRadius: '8px', fontFamily: 'monospace', letterSpacing: '2px', fontSize: '14px', color: '#1e293b' }}>
-                                            {form.code || '—'}
-                                        </code>
-                                        <button onClick={() => set('code', autoCode())} style={{ padding: '8px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
-                                            Regenerate
-                                        </button>
+                            {/* Code — coupons only; promos auto-apply so no code needed */}
+                            {form.type === 'coupon' ? (
+                                <>
+                                    <Label>Coupon Code</Label>
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                                        {['auto','manual'].map(m => (
+                                            <button key={m} onClick={() => set('codeMode', m)}
+                                                style={{
+                                                    padding: '5px 14px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', fontSize: '12px',
+                                                    borderColor: form.codeMode === m ? '#006d2f' : '#e2e8f0',
+                                                    background:  form.codeMode === m ? '#f0fdf4' : '#fff',
+                                                    color:       form.codeMode === m ? '#006d2f' : '#64748b',
+                                                }}>
+                                                {m === 'auto' ? 'Auto-generate' : 'Set manually'}
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
-                            </>
+                                    {form.codeMode === 'manual' ? (
+                                        <input value={form.code} onChange={e => set('code', e.target.value.toUpperCase())}
+                                            placeholder="e.g. DIWALI20"
+                                            style={{ ...input, fontFamily: 'monospace', letterSpacing: '1px' }} />
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                            <code style={{ flex: 1, background: '#f1f5f9', padding: '10px 12px', borderRadius: '8px', fontFamily: 'monospace', letterSpacing: '2px', fontSize: '14px', color: '#1e293b' }}>
+                                                {form.code || '—'}
+                                            </code>
+                                            <button onClick={() => set('code', autoCode())} style={{ padding: '8px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
+                                                Regenerate
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#16a34a' }}>
+                                    📢 Promos auto-apply at checkout — no code needed. Customers will see this discount applied automatically.
+                                </div>
+                            )}
 
                             {/* Unit */}
                             <Label>Discount Type *</Label>
