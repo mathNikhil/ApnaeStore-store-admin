@@ -327,7 +327,7 @@ const Coupons = () => {
     const handleSave = async () => {
         setFormErr('');
         if (!form.name.trim())  return setFormErr('Name is required');
-        if (form.codeMode === 'manual' && !form.code.trim()) return setFormErr('Code is required');
+        if (form.type === 'coupon' && form.codeMode === 'manual' && !form.code.trim()) return setFormErr('Code is required');
         if (!form.start_at)     return setFormErr('Start date is required');
         if (!form.end_at)       return setFormErr('End date is required');
         if (new Date(form.end_at) <= new Date(form.start_at))
@@ -467,7 +467,10 @@ const Coupons = () => {
                                             }}>{row.type === 'coupon' ? 'Coupon' : 'Promo'}</span>
                                         </td>
                                         <td style={td}>
-                                            <code style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '12px', color: '#1e293b', letterSpacing: '1px' }}>{row.code}</code>
+                                            {row.type === 'promo'
+                                                ? <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>Auto-apply</span>
+                                                : <code style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '12px', color: '#1e293b', letterSpacing: '1px' }}>{row.code}</code>
+                                            }
                                         </td>
                                         <td style={td}>{fmtDiscount(row)}</td>
                                         <td style={td}>{row.min_order_value > 0 ? `₹${row.min_order_value}` : '—'}</td>
