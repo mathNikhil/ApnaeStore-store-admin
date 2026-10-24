@@ -53,7 +53,7 @@ const EMPTY_FORM = {
     name: '', type: 'coupon', code: '', codeMode: 'auto',
     unit: 'percent', value: '', buy_qty: '2', get_qty: '1',
     min_order_value: '', max_uses: '',
-    scope: 'full_store', scope_items: [],
+    scope: 'full_store', scope_items: [], get_items: [],
     start_at: '', end_at: '',
     applicable_to: 'both',
 };
@@ -79,6 +79,8 @@ const Coupons = () => {
     const [catalogLoading, setCatalogLoading] = useState(false);
     const [catalogSearch, setCatalogSearch] = useState('');
     const [expandedProduct, setExpandedProduct] = useState(null);
+    const [catalogSearchGet, setCatalogSearchGet] = useState('');
+    const [expandedProductGet, setExpandedProductGet] = useState(null);
 
     // Confirm delete
     const [deleteId, setDeleteId] = useState(null);
@@ -112,6 +114,9 @@ const Coupons = () => {
         setForm({ ...EMPTY_FORM, code: autoCode() });
         setFormErr('');
         setCatalogSearch('');
+        setCatalogSearchGet('');
+        setExpandedProduct(null);
+        setExpandedProductGet(null);
         setDrawerOpen(true);
     };
 
@@ -128,14 +133,18 @@ const Coupons = () => {
             get_qty: row.buy_x_get_y?.get_qty ?? '1',
             min_order_value: row.min_order_value ?? '',
             max_uses: row.max_uses ?? '',
-            scope: row.scope,
+            scope: row.unit === 'buy_x_get_y' ? 'product' : row.scope,
             scope_items: row.scope_items ?? [],
+            get_items: row.get_items ?? [],
             start_at: row.start_at ? row.start_at.slice(0, 16) : '',
             end_at:   row.end_at   ? row.end_at.slice(0, 16)   : '',
             applicable_to: row.applicable_to ?? 'both',
         });
         setFormErr('');
         setCatalogSearch('');
+        setCatalogSearchGet('');
+        setExpandedProduct(null);
+        setExpandedProductGet(null);
         setDrawerOpen(true);
     };
 
@@ -259,6 +268,61 @@ const Coupons = () => {
         });
     };
 
+    /* ── get_items toggle helpers (for "get free" product picker) ── */
+    const toggleGetItem = (item) => {
+        setForm(f => {
+            const existing = f.get_items || [];
+            return {
+                ...f,
+                get_items: existing.includes(item)
+                    ? existing.filter(i => i !== item)
+                    : [...existing, item],
+            };
+        });
+    };
+
+    const isGetVariationFullySelected = (pid, variation) => {
+        const items = form.get_items || [];
+        return variation.sizes.every(s => items.includes(`${pid}:${variation.variationId}:${s.sizeId}`));
+    };
+
+    const toggleGetVariation = (pid, variation) => {
+        const allKeys = variation.sizes.map(s => `${pid}:${variation.variationId}:${s.sizeId}`);
+        const allSelected = isGetVariationFullySelected(pid, variation);
+        setForm(f => {
+            const existing = f.get_items || [];
+            return {
+                ...f,
+                get_items: allSelected
+                    ? existing.filter(i => !allKeys.includes(i))
+                    : [...new Set([...existing, ...allKeys])],
+            };
+        });
+    };
+
+    const isGetProductFullySelected = (product) => {
+        const items = form.get_items || [];
+        return product.variations.every(v =>
+            v.sizes.every(s => items.includes(`${product.id}:${v.variationId}:${s.sizeId}`))
+        );
+    };
+
+    const toggleGetProduct = (product) => {
+        const allKeys = product.variations.flatMap(v =>
+            v.sizes.map(s => `${product.id}:${v.variationId}:${s.sizeId}`)
+        );
+        const allSelected = isGetProductFullySelected(product);
+        setForm(f => {
+            const existing = f.get_items || [];
+            return {
+                ...f,
+                get_items: allSelected
+                    ? existing.filter(i => !allKeys.includes(i))
+                    : [...new Set([...existing, ...allKeys])],
+            };
+        });
+    };
+
     /* save */
     const handleSave = async () => {
         setFormErr('');
@@ -271,20 +335,24 @@ const Coupons = () => {
 
         const code = form.codeMode === 'auto' ? autoCode() : form.code.trim().toUpperCase();
 
+        const isBXGY = form.unit === 'buy_x_get_y';
         const payload = {
             name:            form.name.trim(),
             type:            form.type,
             code,
             unit:            form.unit,
-            value:           form.unit !== 'free_shipping' && form.unit !== 'buy_x_get_y'
+            value:           !isBXGY && form.unit !== 'free_shipping'
                                ? parseFloat(form.value) || 0 : 0,
-            buy_x_get_y:     form.unit === 'buy_x_get_y'
+            buy_x_get_y:     isBXGY
                                ? { buy_qty: parseInt(form.buy_qty), get_qty: parseInt(form.get_qty) }
                                : null,
             min_order_value: parseFloat(form.min_order_value) || 0,
             max_uses:        form.max_uses !== '' ? parseInt(form.max_uses) : null,
-            scope:           form.scope,
+            // For Buy X Get Y, scope is always 'product'
+            scope:           isBXGY ? 'product' : form.scope,
             scope_items:     form.scope_items,
+            // get_items: which products are given free; empty = same as scope_items
+            get_items:       isBXGY ? (form.get_items || []) : [],
             start_at:        new Date(form.start_at).toISOString(),
             end_at:          new Date(form.end_at).toISOString(),
             applicable_to:   form.applicable_to || 'both',
@@ -506,7 +574,17 @@ const Coupons = () => {
 
                             {/* Unit */}
                             <Label>Discount Type *</Label>
-                            <select value={form.unit} onChange={e => set('unit', e.target.value)} style={{ ...input, cursor: 'pointer' }}>
+                            <select value={form.unit} onChange={e => {
+                                const newUnit = e.target.value;
+                                setForm(f => ({
+                                    ...f,
+                                    unit: newUnit,
+                                    // Force product scope for Buy X Get Y
+                                    scope: newUnit === 'buy_x_get_y' ? 'product' : f.scope,
+                                    // Reset get_items when switching away
+                                    get_items: newUnit === 'buy_x_get_y' ? f.get_items : [],
+                                }));
+                            }} style={{ ...input, cursor: 'pointer' }}>
                                 <option value="percent">% Percentage off</option>
                                 <option value="flat">₹ Flat amount off</option>
                                 <option value="free_shipping">🚚 Free Shipping</option>
@@ -546,182 +624,104 @@ const Coupons = () => {
                             <input type="number" min="1" value={form.max_uses} onChange={e => set('max_uses', e.target.value)}
                                 placeholder="Leave empty for unlimited" style={input} />
 
-                            {/* Scope */}
-                            <Label>Applies To</Label>
-                            <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, scope_items: [] }))} style={{ ...input, cursor: 'pointer' }}>
-                                <option value="full_store">Full Store (all products)</option>
-                                <option value="product">Specific Products</option>
-                                <option value="category">Specific Categories</option>
-                            </select>
-                            {(form.scope === 'product' || form.scope === 'category') && (
-                                <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
-                                        Select {form.scope === 'product' ? 'Products / Variants / Sizes' : 'Categories'} *
+                            {/* Scope — hidden for Buy X Get Y (always product) */}
+                            {form.unit !== 'buy_x_get_y' && (
+                                <>
+                                    <Label>Applies To</Label>
+                                    <select value={form.scope} onChange={e => setForm(f => ({ ...f, scope: e.target.value, scope_items: [] }))} style={{ ...input, cursor: 'pointer' }}>
+                                        <option value="full_store">Full Store (all products)</option>
+                                        <option value="product">Specific Products</option>
+                                        <option value="category">Specific Categories</option>
+                                    </select>
+                                    {(form.scope === 'product' || form.scope === 'category') && (
+                                        <ProductPicker
+                                            label={`Select ${form.scope === 'product' ? 'Products / Variants / Sizes' : 'Categories'} *`}
+                                            scope={form.scope}
+                                            selectedItems={form.scope_items || []}
+                                            catalogProducts={catalogProducts}
+                                            catalogCategories={catalogCategories}
+                                            catalogLoading={catalogLoading}
+                                            search={catalogSearch}
+                                            onSearchChange={setCatalogSearch}
+                                            expandedProduct={expandedProduct}
+                                            onExpandProduct={setExpandedProduct}
+                                            onToggleItem={toggleScopeItem}
+                                            onToggleVariation={toggleVariation}
+                                            onToggleProduct={toggleProduct}
+                                            isProductFullySelected={isProductFullySelected}
+                                            isVariationFullySelected={isVariationFullySelected}
+                                            onClearAll={() => setForm(f => ({ ...f, scope_items: [] }))}
+                                            accentColor="#006d2f"
+                                            accentBg="#f0fdf4"
+                                        />
+                                    )}
+                                </>
+                            )}
+
+                            {/* Buy X Get Y: two product pickers */}
+                            {form.unit === 'buy_x_get_y' && (
+                                <div style={{ marginBottom: '8px' }}>
+                                    <div style={{
+                                        background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px',
+                                        padding: '10px 14px', fontSize: '12px', color: '#1d4ed8', marginBottom: '16px',
+                                        lineHeight: '1.5',
+                                    }}>
+                                        🎁 <strong>Buy X Get Y</strong> — select which products the customer must <strong>buy</strong> (left), and which products they get <strong>free</strong> (right). Both pickers can include the same products.
                                     </div>
 
-                                    {/* Selected summary chips */}
-                                    {(form.scope_items || []).length > 0 && (
-                                        <div style={{ marginBottom: '10px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px', color: '#15803d', fontWeight: '600' }}>
-                                            ✓ {form.scope_items.length} {form.scope === 'product' ? 'variant/size' : 'categor'}{form.scope_items.length !== 1 ? (form.scope === 'product' ? 's' : 'ies') : (form.scope === 'product' ? '' : 'y')} selected
-                                            <button onClick={() => setForm(f => ({ ...f, scope_items: [] }))} style={{ marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: '11px', fontWeight: '600' }}>Clear all</button>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        {/* "Buy" products = scope_items */}
+                                        <div>
+                                            <ProductPicker
+                                                label="🛒 Customer Buys"
+                                                scope="product"
+                                                selectedItems={form.scope_items || []}
+                                                catalogProducts={catalogProducts}
+                                                catalogCategories={[]}
+                                                catalogLoading={catalogLoading}
+                                                search={catalogSearch}
+                                                onSearchChange={setCatalogSearch}
+                                                expandedProduct={expandedProduct}
+                                                onExpandProduct={setExpandedProduct}
+                                                onToggleItem={toggleScopeItem}
+                                                onToggleVariation={toggleVariation}
+                                                onToggleProduct={toggleProduct}
+                                                isProductFullySelected={isProductFullySelected}
+                                                isVariationFullySelected={isVariationFullySelected}
+                                                onClearAll={() => setForm(f => ({ ...f, scope_items: [] }))}
+                                                accentColor="#1d4ed8"
+                                                accentBg="#eff6ff"
+                                                compact
+                                            />
                                         </div>
-                                    )}
-
-                                    {/* Search */}
-                                    <input
-                                        value={catalogSearch}
-                                        onChange={e => setCatalogSearch(e.target.value)}
-                                        placeholder={`Search ${form.scope === 'product' ? 'products or variants' : 'categories'}…`}
-                                        style={{ ...input, marginBottom: '6px' }}
-                                    />
-
-                                    {/* Catalog list */}
-                                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '320px', overflowY: 'auto', background: '#fff' }}>
-                                        {catalogLoading ? (
-                                            <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading products…</div>
-                                        ) : form.scope === 'product' ? (
-                                            (() => {
-                                                const q = catalogSearch.toLowerCase();
-                                                const filtered = catalogProducts.filter(p =>
-                                                    !q ||
-                                                    p.name?.toLowerCase().includes(q) ||
-                                                    p.category?.toLowerCase().includes(q) ||
-                                                    p.variations?.some(v => v.variationName?.toLowerCase().includes(q))
-                                                );
-                                                return filtered.length === 0 ? (
-                                                    <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No products found</div>
-                                                ) : filtered.map(p => {
-                                                    const fullySelected = isProductFullySelected(p);
-                                                    const partiallySelected = !fullySelected && p.variations.some(v =>
-                                                        v.sizes.some(s => (form.scope_items||[]).includes(`${p.id}:${v.variationId}:${s.sizeId}`))
-                                                    );
-                                                    const isExpanded = expandedProduct === p.id;
-                                                    return (
-                                                        <div key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                            {/* Product row */}
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px' }}>
-                                                                {/* Product image */}
-                                                                <div style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
-                                                                    {p.image
-                                                                        ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display='none'; }} />
-                                                                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📦</div>
-                                                                    }
-                                                                </div>
-                                                                {/* Product name + category */}
-                                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                                    <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '13px' }}>{p.name}</div>
-                                                                    {p.category && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{p.category}</div>}
-                                                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                                                        {p.variations.length} variant{p.variations.length !== 1 ? 's' : ''}
-                                                                    </div>
-                                                                </div>
-                                                                {/* Select all checkbox */}
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', color: '#64748b', userSelect: 'none' }}>
-                                                                        <input type="checkbox"
-                                                                            checked={fullySelected}
-                                                                            ref={el => { if (el) el.indeterminate = partiallySelected; }}
-                                                                            onChange={() => toggleProduct(p)}
-                                                                            style={{ accentColor: '#006d2f', width: '14px', height: '14px' }}
-                                                                        />
-                                                                        All
-                                                                    </label>
-                                                                    <button onClick={() => setExpandedProduct(isExpanded ? null : p.id)}
-                                                                        style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>
-                                                                        {isExpanded ? '▲ Hide' : '▼ Pick'}
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Expanded: variations + sizes */}
-                                                            {isExpanded && (
-                                                                <div style={{ borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
-                                                                    {p.variations.map(v => {
-                                                                        const varFull = isVariationFullySelected(p.id, v);
-                                                                        const varPartial = !varFull && v.sizes.some(s => (form.scope_items||[]).includes(`${p.id}:${v.variationId}:${s.sizeId}`));
-                                                                        return (
-                                                                            <div key={v.variationId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                                                {/* Variation header */}
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px 8px 20px' }}>
-                                                                                    {v.image
-                                                                                        ? <img src={v.image} alt={v.variationName} style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }} onError={e => { e.target.style.display='none'; }} />
-                                                                                        : <div style={{ width: '28px', height: '28px', borderRadius: '4px', background: '#e2e8f0', flexShrink: 0 }} />
-                                                                                    }
-                                                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151', flex: 1 }}>{v.variationName}</span>
-                                                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', color: '#64748b', userSelect: 'none' }}>
-                                                                                        <input type="checkbox"
-                                                                                            checked={varFull}
-                                                                                            ref={el => { if (el) el.indeterminate = varPartial; }}
-                                                                                            onChange={() => toggleVariation(p.id, v)}
-                                                                                            style={{ accentColor: '#006d2f', width: '13px', height: '13px' }}
-                                                                                        />
-                                                                                        All sizes
-                                                                                    </label>
-                                                                                </div>
-                                                                                {/* Sizes */}
-                                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 12px 10px 56px' }}>
-                                                                                    {v.sizes.map(s => {
-                                                                                        const key = `${p.id}:${v.variationId}:${s.sizeId}`;
-                                                                                        const checked = (form.scope_items||[]).includes(key);
-                                                                                        return (
-                                                                                            <label key={s.sizeId} style={{
-                                                                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                                                                padding: '3px 10px', borderRadius: '20px', cursor: 'pointer',
-                                                                                                border: `1px solid ${checked ? '#006d2f' : '#e2e8f0'}`,
-                                                                                                background: checked ? '#f0fdf4' : '#fff',
-                                                                                                fontSize: '12px', fontWeight: checked ? '700' : '500',
-                                                                                                color: checked ? '#006d2f' : '#374151', userSelect: 'none',
-                                                                                            }}>
-                                                                                                <input type="checkbox" checked={checked} onChange={() => toggleScopeItem(key)}
-                                                                                                    style={{ display: 'none' }} />
-                                                                                                {s.sizeLabel}
-                                                                                                {s.price && <span style={{ fontSize: '10px', color: checked ? '#15803d' : '#94a3b8', marginLeft: '2px' }}>₹{Number(s.price).toLocaleString()}</span>}
-                                                                                            </label>
-                                                                                        );
-                                                                                    })}
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                });
-                                            })()
-                                        ) : (
-                                            (() => {
-                                                const filtered = catalogCategories.filter(c =>
-                                                    !catalogSearch || c.toLowerCase().includes(catalogSearch.toLowerCase())
-                                                );
-                                                return filtered.length === 0 ? (
-                                                    <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No categories found</div>
-                                                ) : filtered.map(cat => {
-                                                    const selected = (form.scope_items || []).includes(cat);
-                                                    const count = catalogProducts.filter(p => p.category === cat).length;
-                                                    return (
-                                                        <div key={cat} onClick={() => toggleScopeItem(cat)}
-                                                            style={{
-                                                                display: 'flex', alignItems: 'center', gap: '10px',
-                                                                padding: '9px 12px', cursor: 'pointer', fontSize: '13px',
-                                                                borderBottom: '1px solid #f8fafc',
-                                                                background: selected ? '#f0fdf4' : '#fff',
-                                                                color: selected ? '#15803d' : '#374151',
-                                                            }}
-                                                            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fdf4' : '#fff'; }}>
-                                                            <span style={{ fontSize: '14px' }}>{selected ? '☑' : '☐'}</span>
-                                                            <div style={{ fontWeight: selected ? '700' : '500' }}>{cat}</div>
-                                                            <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{count} product{count !== 1 ? 's' : ''}</span>
-                                                        </div>
-                                                    );
-                                                });
-                                            })()
-                                        )}
+                                        {/* "Get free" products = get_items */}
+                                        <div>
+                                            <ProductPicker
+                                                label="🎁 Customer Gets Free"
+                                                scope="product"
+                                                selectedItems={form.get_items || []}
+                                                catalogProducts={catalogProducts}
+                                                catalogCategories={[]}
+                                                catalogLoading={catalogLoading}
+                                                search={catalogSearchGet}
+                                                onSearchChange={setCatalogSearchGet}
+                                                expandedProduct={expandedProductGet}
+                                                onExpandProduct={setExpandedProductGet}
+                                                onToggleItem={toggleGetItem}
+                                                onToggleVariation={toggleGetVariation}
+                                                onToggleProduct={toggleGetProduct}
+                                                isProductFullySelected={isGetProductFullySelected}
+                                                isVariationFullySelected={isGetVariationFullySelected}
+                                                onClearAll={() => setForm(f => ({ ...f, get_items: [] }))}
+                                                accentColor="#15803d"
+                                                accentBg="#f0fdf4"
+                                                compact
+                                            />
+                                        </div>
                                     </div>
-                                    {(form.scope_items || []).length === 0 && (
-                                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Select at least one {form.scope === 'product' ? 'product' : 'category'}</div>
-                                    )}
+                                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                        Leave "Gets Free" empty to allow any product as the free item.
+                                    </div>
                                 </div>
                             )}
 
@@ -810,6 +810,162 @@ const Coupons = () => {
         </div>
     );
 };
+
+/* ─── ProductPicker ───────────────────────────────────────── */
+function ProductPicker({
+    label, scope, selectedItems, catalogProducts, catalogCategories,
+    catalogLoading, search, onSearchChange, expandedProduct, onExpandProduct,
+    onToggleItem, onToggleVariation, onToggleProduct,
+    isProductFullySelected, isVariationFullySelected,
+    onClearAll, accentColor = '#006d2f', accentBg = '#f0fdf4', compact = false,
+}) {
+    const maxHeight = compact ? '240px' : '320px';
+    return (
+        <div style={{ marginBottom: compact ? '0' : '16px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
+                {label}
+            </div>
+            {selectedItems.length > 0 && (
+                <div style={{ marginBottom: '8px', padding: '6px 10px', background: accentBg, border: `1px solid ${accentColor}44`, borderRadius: '6px', fontSize: '11px', color: accentColor, fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>✓ {selectedItems.length} selected</span>
+                    <button onClick={onClearAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c', fontSize: '11px', fontWeight: '600', padding: 0 }}>Clear</button>
+                </div>
+            )}
+            <input
+                value={search}
+                onChange={e => onSearchChange(e.target.value)}
+                placeholder={`Search ${scope === 'product' ? 'products…' : 'categories…'}`}
+                style={{ width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', outline: 'none', marginBottom: '6px', boxSizing: 'border-box', color: '#1e293b', background: '#fff' }}
+            />
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight, overflowY: 'auto', background: '#fff' }}>
+                {catalogLoading ? (
+                    <div style={{ padding: '14px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading…</div>
+                ) : scope === 'product' ? (() => {
+                    const q = search.toLowerCase();
+                    const filtered = catalogProducts.filter(p =>
+                        !q || p.name?.toLowerCase().includes(q) ||
+                        p.category?.toLowerCase().includes(q) ||
+                        p.variations?.some(v => v.variationName?.toLowerCase().includes(q))
+                    );
+                    return filtered.length === 0 ? (
+                        <div style={{ padding: '14px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No products found</div>
+                    ) : filtered.map(p => {
+                        const fullySelected = isProductFullySelected(p);
+                        const partiallySelected = !fullySelected && p.variations.some(v =>
+                            v.sizes.some(s => selectedItems.includes(`${p.id}:${v.variationId}:${s.sizeId}`))
+                        );
+                        const isExpanded = expandedProduct === p.id;
+                        return (
+                            <div key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px' }}>
+                                    <div style={{ width: '36px', height: '36px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                                        {p.image
+                                            ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display='none'; }} />
+                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📦</div>
+                                        }
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                        {p.category && <div style={{ fontSize: '10px', color: '#94a3b8' }}>{p.category}</div>}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontSize: '10px', color: '#64748b', userSelect: 'none' }}>
+                                            <input type="checkbox"
+                                                checked={fullySelected}
+                                                ref={el => { if (el) el.indeterminate = partiallySelected; }}
+                                                onChange={() => onToggleProduct(p)}
+                                                style={{ accentColor, width: '13px', height: '13px' }}
+                                            />
+                                            All
+                                        </label>
+                                        <button onClick={() => onExpandProduct(isExpanded ? null : p.id)}
+                                            style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer', fontSize: '10px', color: '#64748b' }}>
+                                            {isExpanded ? '▲' : '▼'}
+                                        </button>
+                                    </div>
+                                </div>
+                                {isExpanded && (
+                                    <div style={{ borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
+                                        {p.variations.map(v => {
+                                            const varFull = isVariationFullySelected(p.id, v);
+                                            const varPartial = !varFull && v.sizes.some(s => selectedItems.includes(`${p.id}:${v.variationId}:${s.sizeId}`));
+                                            return (
+                                                <div key={v.variationId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px 6px 16px' }}>
+                                                        {v.image
+                                                            ? <img src={v.image} alt={v.variationName} style={{ width: '22px', height: '22px', borderRadius: '3px', objectFit: 'cover', flexShrink: 0 }} onError={e => { e.target.style.display='none'; }} />
+                                                            : <div style={{ width: '22px', height: '22px', borderRadius: '3px', background: '#e2e8f0', flexShrink: 0 }} />
+                                                        }
+                                                        <span style={{ fontSize: '11px', fontWeight: '600', color: '#374151', flex: 1 }}>{v.variationName}</span>
+                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer', fontSize: '10px', color: '#64748b', userSelect: 'none' }}>
+                                                            <input type="checkbox"
+                                                                checked={varFull}
+                                                                ref={el => { if (el) el.indeterminate = varPartial; }}
+                                                                onChange={() => onToggleVariation(p.id, v)}
+                                                                style={{ accentColor, width: '12px', height: '12px' }}
+                                                            />
+                                                            All sizes
+                                                        </label>
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '0 10px 8px 44px' }}>
+                                                        {v.sizes.map(s => {
+                                                            const key = `${p.id}:${v.variationId}:${s.sizeId}`;
+                                                            const checked = selectedItems.includes(key);
+                                                            return (
+                                                                <label key={s.sizeId} style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                                                    padding: '2px 8px', borderRadius: '16px', cursor: 'pointer',
+                                                                    border: `1px solid ${checked ? accentColor : '#e2e8f0'}`,
+                                                                    background: checked ? accentBg : '#fff',
+                                                                    fontSize: '11px', fontWeight: checked ? '700' : '500',
+                                                                    color: checked ? accentColor : '#374151', userSelect: 'none',
+                                                                }}>
+                                                                    <input type="checkbox" checked={checked} onChange={() => onToggleItem(key)} style={{ display: 'none' }} />
+                                                                    {s.sizeLabel}
+                                                                    {s.price && <span style={{ fontSize: '9px', color: checked ? accentColor : '#94a3b8', marginLeft: '1px', opacity: 0.8 }}>₹{Number(s.price).toLocaleString()}</span>}
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    });
+                })() : (() => {
+                    const filtered = catalogCategories.filter(c =>
+                        !search || c.toLowerCase().includes(search.toLowerCase())
+                    );
+                    return filtered.length === 0 ? (
+                        <div style={{ padding: '14px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No categories found</div>
+                    ) : filtered.map(cat => {
+                        const selected = selectedItems.includes(cat);
+                        const count = catalogProducts.filter(p => p.category === cat).length;
+                        return (
+                            <div key={cat} onClick={() => onToggleItem(cat)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '8px 12px', cursor: 'pointer', fontSize: '12px',
+                                    borderBottom: '1px solid #f8fafc',
+                                    background: selected ? accentBg : '#fff',
+                                    color: selected ? accentColor : '#374151',
+                                }}
+                                onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = selected ? accentBg : '#fff'; }}>
+                                <span>{selected ? '☑' : '☐'}</span>
+                                <div style={{ fontWeight: selected ? '700' : '500' }}>{cat}</div>
+                                <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#94a3b8' }}>{count} product{count !== 1 ? 's' : ''}</span>
+                            </div>
+                        );
+                    });
+                })()}
+            </div>
+        </div>
+    );
+}
 
 /* ─── tiny style helpers ──────────────────────────────────── */
 const Label = ({ children }) => (
