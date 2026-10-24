@@ -604,11 +604,11 @@ const Coupons = () => {
                             {form.unit === 'buy_x_get_y' && (
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                                     <div style={{ flex: 1 }}>
-                                        <Label>Buy Qty</Label>
+                                        <Label>Product X — Buy Qty</Label>
                                         <input type="number" min="1" value={form.buy_qty} onChange={e => set('buy_qty', e.target.value)} style={input} />
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <Label>Get Qty Free</Label>
+                                        <Label>Product Y — Get Qty Free</Label>
                                         <input type="number" min="1" value={form.get_qty} onChange={e => set('get_qty', e.target.value)} style={input} />
                                     </div>
                                 </div>
