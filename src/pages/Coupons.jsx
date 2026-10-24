@@ -664,12 +664,12 @@ const Coupons = () => {
                                         padding: '10px 14px', fontSize: '12px', color: '#1d4ed8', marginBottom: '16px',
                                         lineHeight: '1.5',
                                     }}>
-                                        🎁 <strong>Buy X Get Y</strong> — select which products the customer must <strong>buy</strong> (left), and which products they get <strong>free</strong> (right). Both pickers can include the same products.
+                                        🎁 <strong>Buy X Get Y</strong> — <strong>Product X</strong> is what the customer must buy, <strong>Product Y</strong> is what they get free. Both can be the same product.
                                     </div>
 
                                     {/* "Buy" products = scope_items */}
                                     <ProductPicker
-                                        label="🛒 Step 1 — Customer must buy these products"
+                                        label="🛒 Product X — Customer must buy these"
                                         scope="product"
                                         selectedItems={form.scope_items || []}
                                         catalogProducts={catalogProducts}
@@ -691,7 +691,7 @@ const Coupons = () => {
 
                                     {/* "Get free" products = get_items */}
                                     <ProductPicker
-                                        label="🎁 Step 2 — Customer gets these for free"
+                                        label="🎁 Product Y — Customer gets these for free"
                                         scope="product"
                                         selectedItems={form.get_items || []}
                                         catalogProducts={catalogProducts}
