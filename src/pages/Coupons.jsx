@@ -648,8 +648,6 @@ const Coupons = () => {
                                             onToggleItem={toggleScopeItem}
                                             onToggleVariation={toggleVariation}
                                             onToggleProduct={toggleProduct}
-                                            isProductFullySelected={isProductFullySelected}
-                                            isVariationFullySelected={isVariationFullySelected}
                                             onClearAll={() => setForm(f => ({ ...f, scope_items: [] }))}
                                             accentColor="#006d2f"
                                             accentBg="#f0fdf4"
@@ -669,56 +667,47 @@ const Coupons = () => {
                                         🎁 <strong>Buy X Get Y</strong> — select which products the customer must <strong>buy</strong> (left), and which products they get <strong>free</strong> (right). Both pickers can include the same products.
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        {/* "Buy" products = scope_items */}
-                                        <div>
-                                            <ProductPicker
-                                                label="🛒 Customer Buys"
-                                                scope="product"
-                                                selectedItems={form.scope_items || []}
-                                                catalogProducts={catalogProducts}
-                                                catalogCategories={[]}
-                                                catalogLoading={catalogLoading}
-                                                search={catalogSearch}
-                                                onSearchChange={setCatalogSearch}
-                                                expandedProduct={expandedProduct}
-                                                onExpandProduct={setExpandedProduct}
-                                                onToggleItem={toggleScopeItem}
-                                                onToggleVariation={toggleVariation}
-                                                onToggleProduct={toggleProduct}
-                                                isProductFullySelected={isProductFullySelected}
-                                                isVariationFullySelected={isVariationFullySelected}
-                                                onClearAll={() => setForm(f => ({ ...f, scope_items: [] }))}
-                                                accentColor="#1d4ed8"
-                                                accentBg="#eff6ff"
-                                                compact
-                                            />
-                                        </div>
-                                        {/* "Get free" products = get_items */}
-                                        <div>
-                                            <ProductPicker
-                                                label="🎁 Customer Gets Free"
-                                                scope="product"
-                                                selectedItems={form.get_items || []}
-                                                catalogProducts={catalogProducts}
-                                                catalogCategories={[]}
-                                                catalogLoading={catalogLoading}
-                                                search={catalogSearchGet}
-                                                onSearchChange={setCatalogSearchGet}
-                                                expandedProduct={expandedProductGet}
-                                                onExpandProduct={setExpandedProductGet}
-                                                onToggleItem={toggleGetItem}
-                                                onToggleVariation={toggleGetVariation}
-                                                onToggleProduct={toggleGetProduct}
-                                                isProductFullySelected={isGetProductFullySelected}
-                                                isVariationFullySelected={isGetVariationFullySelected}
-                                                onClearAll={() => setForm(f => ({ ...f, get_items: [] }))}
-                                                accentColor="#15803d"
-                                                accentBg="#f0fdf4"
-                                                compact
-                                            />
-                                        </div>
-                                    </div>
+                                    {/* "Buy" products = scope_items */}
+                                    <ProductPicker
+                                        label="🛒 Step 1 — Customer must buy these products"
+                                        scope="product"
+                                        selectedItems={form.scope_items || []}
+                                        catalogProducts={catalogProducts}
+                                        catalogCategories={[]}
+                                        catalogLoading={catalogLoading}
+                                        search={catalogSearch}
+                                        onSearchChange={setCatalogSearch}
+                                        expandedProduct={expandedProduct}
+                                        onExpandProduct={setExpandedProduct}
+                                        onToggleItem={toggleScopeItem}
+                                        onToggleVariation={toggleVariation}
+                                        onToggleProduct={toggleProduct}
+                                        onClearAll={() => setForm(f => ({ ...f, scope_items: [] }))}
+                                        accentColor="#1d4ed8"
+                                        accentBg="#eff6ff"
+                                    />
+
+                                    <div style={{ borderTop: '1px dashed #e2e8f0', margin: '4px 0 16px' }} />
+
+                                    {/* "Get free" products = get_items */}
+                                    <ProductPicker
+                                        label="🎁 Step 2 — Customer gets these for free"
+                                        scope="product"
+                                        selectedItems={form.get_items || []}
+                                        catalogProducts={catalogProducts}
+                                        catalogCategories={[]}
+                                        catalogLoading={catalogLoading}
+                                        search={catalogSearchGet}
+                                        onSearchChange={setCatalogSearchGet}
+                                        expandedProduct={expandedProductGet}
+                                        onExpandProduct={setExpandedProductGet}
+                                        onToggleItem={toggleGetItem}
+                                        onToggleVariation={toggleGetVariation}
+                                        onToggleProduct={toggleGetProduct}
+                                        onClearAll={() => setForm(f => ({ ...f, get_items: [] }))}
+                                        accentColor="#15803d"
+                                        accentBg="#f0fdf4"
+                                    />
                                     <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
                                         Leave "Gets Free" empty to allow any product as the free item.
                                     </div>
@@ -816,9 +805,17 @@ function ProductPicker({
     label, scope, selectedItems, catalogProducts, catalogCategories,
     catalogLoading, search, onSearchChange, expandedProduct, onExpandProduct,
     onToggleItem, onToggleVariation, onToggleProduct,
-    isProductFullySelected, isVariationFullySelected,
     onClearAll, accentColor = '#006d2f', accentBg = '#f0fdf4', compact = false,
 }) {
+    /* Compute selection state internally from selectedItems prop — no stale closures */
+    const isVariationFullySelected = (pid, variation) =>
+        variation.sizes.every(s => selectedItems.includes(`${pid}:${variation.variationId}:${s.sizeId}`));
+
+    const isProductFullySelected = (product) =>
+        product.variations.every(v =>
+            v.sizes.every(s => selectedItems.includes(`${product.id}:${v.variationId}:${s.sizeId}`))
+        );
+
     const maxHeight = compact ? '240px' : '320px';
     return (
         <div style={{ marginBottom: compact ? '0' : '16px' }}>
