@@ -18,11 +18,12 @@ const STAFF_COLORS = [
 ];
 
 const STATUS_META = {
-    pending:   { label: 'Pending',   bg: '#fff3e0', color: '#e65100', icon: '⏳' },
-    confirmed: { label: 'Confirmed', bg: '#e3f2fd', color: '#1565c0', icon: '✅' },
-    completed: { label: 'Completed', bg: '#e8f5e9', color: '#2e7d32', icon: '🏁' },
-    cancelled: { label: 'Cancelled', bg: '#fce4ec', color: '#c62828', icon: '❌' },
-    no_show:   { label: 'No Show',   bg: '#f5f5f5', color: '#616161', icon: '👻' },
+    pending:    { label: 'Pending',    bg: '#fff3e0', color: '#e65100', icon: '⏳' },
+    confirmed:  { label: 'Confirmed',  bg: '#e3f2fd', color: '#1565c0', icon: '✅' },
+    in_session: { label: 'In Session', bg: '#e8f5e9', color: '#2e7d32', icon: '🟢' },
+    completed:  { label: 'Completed',  bg: '#ede7f6', color: '#4527a0', icon: '🏁' },
+    cancelled:  { label: 'Cancelled',  bg: '#fce4ec', color: '#c62828', icon: '❌' },
+    no_show:    { label: 'No Show',    bg: '#f5f5f5', color: '#616161', icon: '👻' },
 };
 
 // Convert "HH:MM" → minutes from midnight
@@ -293,7 +294,7 @@ const Appointments = () => {
 
                 {/* Status filter chips */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                    {['all', 'pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map(s => {
+                    {['all', 'pending', 'confirmed', 'in_session', 'completed', 'cancelled', 'no_show'].map(s => {
                         const meta = STATUS_META[s] || { label: 'All', bg: '#e0e0e0', color: '#333' };
                         const active = statusFilter === s;
                         return (
