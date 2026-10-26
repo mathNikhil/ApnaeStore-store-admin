@@ -503,7 +503,7 @@ const Appointments = () => {
                                 {selectedBooking.order_id && (
                                     <DetailRow label="Order ID" value={selectedBooking.order_id} />
                                 )}
-                                <DetailRow label="Customer" value={selectedBooking.customer_name || '—'} />
+                                <DetailRow label="Customer" value={selectedBooking.customer_name || selectedBooking.customer_phone || '—'} />
                                 <DetailRow label="Phone" value={selectedBooking.customer_phone || '—'} />
                                 <DetailRow label="Service" value={selectedBooking.service_name || selectedBooking.notes?.split('|')[0]?.trim() || '—'} />
                                 {selectedBooking.service_type && (
@@ -532,17 +532,20 @@ const Appointments = () => {
                                 <DetailRow label="Time" value={`${fmtTime(selectedBooking.booking_time)} · ${selectedBooking.duration_mins || 30} min`} />
                                 <DetailRow label="Price" value={selectedBooking.computed_price ? `₹${Number(selectedBooking.computed_price).toLocaleString()}` : selectedBooking.total_amount ? `₹${Number(selectedBooking.total_amount).toLocaleString()}` : '—'} />
                                 {(() => {
-                                    const addr = selectedBooking.customer_address ||
-                                        (selectedBooking.delivery_address
-                                            ? (typeof selectedBooking.delivery_address === 'string'
-                                                ? JSON.parse(selectedBooking.delivery_address)
-                                                : selectedBooking.delivery_address)
-                                            : null);
-                                    if (!addr) return null;
+                                    // Show address for homevisit orders
+                                    const stype = selectedBooking.service_type || selectedBooking.order_type;
+                                    const isHome = stype === 'homevisit' || stype === 'delivery';
+                                    if (!isHome) return null;
+                                    const raw = selectedBooking.customer_address || selectedBooking.delivery_address;
+                                    if (!raw) return <DetailRow label="Address" value="—" />;
+                                    let addr = raw;
+                                    if (typeof raw === 'string') {
+                                        try { addr = JSON.parse(raw); } catch { addr = raw; }
+                                    }
                                     const addrStr = typeof addr === 'object'
-                                        ? [addr.recipientName, addr.addressLine1, addr.addressLine2, addr.city, addr.pincode].filter(Boolean).join(', ')
+                                        ? [addr.recipientName, addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ')
                                         : addr;
-                                    return <DetailRow label="Address" value={addrStr} />;
+                                    return <DetailRow label="Address" value={addrStr || '—'} />;
                                 })()}
                                 {selectedBooking.notes && (
                                     <DetailRow label="Notes" value={selectedBooking.notes} />
