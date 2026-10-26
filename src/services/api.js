@@ -61,8 +61,14 @@ export const storeAdminAPI = {
         apiRequest(`/api/store/${storeId}/admin/orders/${orderId}`),
     updateOrderStatus: (storeId, orderId, status, note) => 
         apiRequest(`/api/store/${storeId}/admin/orders/${orderId}/status`, 'PUT', { status, note }),
-    getOrderStats: (storeId) => 
+    getOrderStats: (storeId) =>
         apiRequest(`/api/store/${storeId}/admin/orders/stats`),
+
+    // Appointments
+    getAppointments: (storeId, date) =>
+        apiRequest(`/api/store/${storeId}/admin/appointments?date=${date}`),
+    updateAppointmentStatus: (storeId, bookingId, status) =>
+        apiRequest(`/api/store/${storeId}/admin/appointments/${bookingId}/status`, 'PATCH', { status }),
 
     // Returns
     getReturns: (storeId) =>

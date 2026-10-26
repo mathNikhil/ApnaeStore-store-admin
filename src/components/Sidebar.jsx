@@ -68,6 +68,7 @@ const Sidebar = ({ onToggle }) => {
         { path: '/staff', icon: '👥', label: 'Staff' },
         { path: '/returns', icon: '↩️', label: 'Returns' },
         { path: '/coupons', icon: '🏷️', label: 'Coupons & Promos' },
+        { path: '/appointments', icon: '📅', label: 'Appointments' },
     ];
 
     React.useEffect(() => {
