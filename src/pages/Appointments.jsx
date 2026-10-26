@@ -501,11 +501,25 @@ const Appointments = () => {
                             <div style={S.detailGrid}>
                                 <DetailRow label="Booking ID" value={`#${selectedBooking.id}`} />
                                 {selectedBooking.order_id && (
-                                    <DetailRow label="Order" value={selectedBooking.order_id} />
+                                    <DetailRow label="Order ID" value={selectedBooking.order_id} />
                                 )}
-                                <DetailRow label="Customer" value={selectedBooking.customer_name || selectedBooking.customer_phone || '—'} />
+                                <DetailRow label="Customer" value={selectedBooking.customer_name || '—'} />
                                 <DetailRow label="Phone" value={selectedBooking.customer_phone || '—'} />
                                 <DetailRow label="Service" value={selectedBooking.service_name || selectedBooking.notes?.split('|')[0]?.trim() || '—'} />
+                                {selectedBooking.service_type && (
+                                    <DetailRow label="Type" value={
+                                        <span style={{
+                                            padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+                                            background: selectedBooking.service_type === 'homevisit' ? '#fff3e0' : '#e3f2fd',
+                                            color: selectedBooking.service_type === 'homevisit' ? '#e65100' : '#1565c0',
+                                        }}>
+                                            {selectedBooking.service_type === 'homevisit' ? '🏠 Home Visit' : '🏪 In Store'}
+                                        </span>
+                                    } />
+                                )}
+                                {selectedBooking.branch_name && (
+                                    <DetailRow label="Branch" value={selectedBooking.branch_name} />
+                                )}
                                 <DetailRow label="Staff" value={selectedBooking.staff_name || 'Unassigned'} />
                                 <DetailRow label="Date" value={
                                     (() => {
@@ -516,10 +530,20 @@ const Appointments = () => {
                                     })()
                                 } />
                                 <DetailRow label="Time" value={`${fmtTime(selectedBooking.booking_time)} · ${selectedBooking.duration_mins || 30} min`} />
-                                <DetailRow label="Price" value={selectedBooking.computed_price ? `₹${Number(selectedBooking.computed_price).toLocaleString()}` : '—'} />
-                                {selectedBooking.service_type === 'homevisit' && selectedBooking.customer_address && (
-                                    <DetailRow label="Address" value={selectedBooking.customer_address} />
-                                )}
+                                <DetailRow label="Price" value={selectedBooking.computed_price ? `₹${Number(selectedBooking.computed_price).toLocaleString()}` : selectedBooking.total_amount ? `₹${Number(selectedBooking.total_amount).toLocaleString()}` : '—'} />
+                                {(() => {
+                                    const addr = selectedBooking.customer_address ||
+                                        (selectedBooking.delivery_address
+                                            ? (typeof selectedBooking.delivery_address === 'string'
+                                                ? JSON.parse(selectedBooking.delivery_address)
+                                                : selectedBooking.delivery_address)
+                                            : null);
+                                    if (!addr) return null;
+                                    const addrStr = typeof addr === 'object'
+                                        ? [addr.recipientName, addr.addressLine1, addr.addressLine2, addr.city, addr.pincode].filter(Boolean).join(', ')
+                                        : addr;
+                                    return <DetailRow label="Address" value={addrStr} />;
+                                })()}
                                 {selectedBooking.notes && (
                                     <DetailRow label="Notes" value={selectedBooking.notes} />
                                 )}
