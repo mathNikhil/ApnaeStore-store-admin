@@ -499,13 +499,30 @@ const Appointments = () => {
                             </div>
 
                             <div style={S.detailGrid}>
+                                <DetailRow label="Booking ID" value={`#${selectedBooking.id}`} />
+                                {selectedBooking.order_id && (
+                                    <DetailRow label="Order" value={selectedBooking.order_id} />
+                                )}
                                 <DetailRow label="Customer" value={selectedBooking.customer_name || selectedBooking.customer_phone || '—'} />
                                 <DetailRow label="Phone" value={selectedBooking.customer_phone || '—'} />
-                                <DetailRow label="Service" value={selectedBooking.service_name || '—'} />
+                                <DetailRow label="Service" value={selectedBooking.service_name || selectedBooking.notes?.split('|')[0]?.trim() || '—'} />
                                 <DetailRow label="Staff" value={selectedBooking.staff_name || 'Unassigned'} />
-                                <DetailRow label="Date" value={selectedBooking.booking_date} />
+                                <DetailRow label="Date" value={
+                                    (() => {
+                                        const d = selectedBooking.booking_date;
+                                        if (!d) return '—';
+                                        const dt = new Date(d);
+                                        return dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                                    })()
+                                } />
                                 <DetailRow label="Time" value={`${fmtTime(selectedBooking.booking_time)} · ${selectedBooking.duration_mins || 30} min`} />
                                 <DetailRow label="Price" value={selectedBooking.computed_price ? `₹${Number(selectedBooking.computed_price).toLocaleString()}` : '—'} />
+                                {selectedBooking.service_type === 'homevisit' && selectedBooking.customer_address && (
+                                    <DetailRow label="Address" value={selectedBooking.customer_address} />
+                                )}
+                                {selectedBooking.notes && (
+                                    <DetailRow label="Notes" value={selectedBooking.notes} />
+                                )}
                                 <DetailRow label="Status" value={
                                     <span style={{
                                         padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700,
