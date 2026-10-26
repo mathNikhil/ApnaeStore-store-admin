@@ -506,17 +506,21 @@ const Appointments = () => {
                                 <DetailRow label="Customer" value={selectedBooking.customer_name || selectedBooking.customer_phone || '—'} />
                                 <DetailRow label="Phone" value={selectedBooking.customer_phone || '—'} />
                                 <DetailRow label="Service" value={selectedBooking.service_name || selectedBooking.notes?.split('|')[0]?.trim() || '—'} />
-                                {selectedBooking.service_type && (
-                                    <DetailRow label="Type" value={
-                                        <span style={{
-                                            padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
-                                            background: selectedBooking.service_type === 'homevisit' ? '#fff3e0' : '#e3f2fd',
-                                            color: selectedBooking.service_type === 'homevisit' ? '#e65100' : '#1565c0',
-                                        }}>
-                                            {selectedBooking.service_type === 'homevisit' ? '🏠 Home Visit' : '🏪 In Store'}
-                                        </span>
-                                    } />
-                                )}
+                                {(() => {
+                                    const st = selectedBooking.service_type;
+                                    const isHome = st === 'homevisit' || st === 'delivery' || st === 'home_visit';
+                                    return (
+                                        <DetailRow label="Type" value={
+                                            <span style={{
+                                                padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+                                                background: isHome ? '#fff3e0' : '#e3f2fd',
+                                                color: isHome ? '#e65100' : '#1565c0',
+                                            }}>
+                                                {isHome ? '🏠 Home Visit' : '🏪 In Store'}
+                                            </span>
+                                        } />
+                                    );
+                                })()}
                                 {selectedBooking.branch_name && (
                                     <DetailRow label="Branch" value={selectedBooking.branch_name} />
                                 )}
@@ -533,8 +537,8 @@ const Appointments = () => {
                                 <DetailRow label="Price" value={selectedBooking.computed_price ? `₹${Number(selectedBooking.computed_price).toLocaleString()}` : selectedBooking.total_amount ? `₹${Number(selectedBooking.total_amount).toLocaleString()}` : '—'} />
                                 {(() => {
                                     // Show address for homevisit orders
-                                    const stype = selectedBooking.service_type || selectedBooking.order_type;
-                                    const isHome = stype === 'homevisit' || stype === 'delivery';
+                                    const stype = selectedBooking.service_type;
+                                    const isHome = stype === 'homevisit' || stype === 'delivery' || stype === 'home_visit';
                                     if (!isHome) return null;
                                     const raw = selectedBooking.customer_address || selectedBooking.delivery_address;
                                     if (!raw) return <DetailRow label="Address" value="—" />;
