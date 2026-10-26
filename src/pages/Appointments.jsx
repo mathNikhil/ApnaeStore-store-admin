@@ -152,12 +152,11 @@ const Appointments = () => {
     // Build staff index (id → color index)
     const staffColorMap = {};
     staff.forEach((s, i) => { staffColorMap[s.id] = i % STAFF_COLORS.length; });
-    // For bookings without a staff_id assignment, add unique unassigned entry
-    const hasUnassigned = filteredBookings.some(b => !b.staff_id);
 
-    // Columns: one per active staff + one "Unassigned" if any
+    // Columns: one per active staff + one "Unassigned" if any bookings lack a staff_id
     const cols = [...staff];
     const unassignedCol = { id: null, name: 'Unassigned' };
+    const hasUnassignedBookings = filteredBookings.some(b => !b.staff_id);
 
     // Grid dimensions
     const SLOT_HEIGHT = 60; // px per hour
@@ -197,7 +196,7 @@ const Appointments = () => {
 
     // Build booking → column mapping
     const colBookings = (staffId) =>
-        filteredBookings.filter(b => b.staff_id === staffId);
+        filteredBookings.filter(b => staffId === null ? !b.staff_id : b.staff_id === staffId);
 
     const renderBookingBlock = (booking, colColor) => {
         const top = ((toMins(booking.booking_time) - startMins) / 60) * SLOT_HEIGHT;
@@ -244,7 +243,7 @@ const Appointments = () => {
         );
     };
 
-    const allCols = [...cols, ...(hasUnassigned ? [unassignedCol] : [])];
+    const allCols = [...cols, ...(hasUnassignedBookings ? [unassignedCol] : [])];
 
     return (
         <div style={S.container}>
@@ -318,12 +317,12 @@ const Appointments = () => {
                     })}
                 </div>
 
-                {/* Scheduler grid */}
-                {bookings.length === 0 ? (
+                {/* Scheduler grid — always show, even with zero bookings */}
+                {allCols.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
-                        <div style={{ fontSize: 18, fontWeight: 600 }}>No appointments for this day</div>
-                        <div style={{ fontSize: 14, marginTop: 6 }}>Bookings placed by customers will appear here.</div>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+                        <div style={{ fontSize: 18, fontWeight: 600 }}>No staff configured</div>
+                        <div style={{ fontSize: 14, marginTop: 6 }}>Add active staff members to see the scheduler grid.</div>
                     </div>
                 ) : (
                     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
@@ -451,6 +450,18 @@ const Appointments = () => {
                                                     }}>
                                                         {fmtTime(fromMins(nowMins))}
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* Empty column hint */}
+                                            {colBkgs.length === 0 && (
+                                                <div style={{
+                                                    position: 'absolute', top: '50%', left: 0, right: 0,
+                                                    transform: 'translateY(-50%)',
+                                                    textAlign: 'center', color: '#ddd', fontSize: 11,
+                                                    pointerEvents: 'none', userSelect: 'none',
+                                                }}>
+                                                    No bookings
                                                 </div>
                                             )}
 
