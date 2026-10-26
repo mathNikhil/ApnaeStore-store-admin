@@ -508,6 +508,7 @@ const Appointments = () => {
                                 <DetailRow label="Service" value={selectedBooking.service_name || selectedBooking.notes?.split('|')[0]?.trim() || '—'} />
                                 {(() => {
                                     const st = selectedBooking.service_type;
+                                    if (!st) return null;
                                     const isHome = st === 'homevisit' || st === 'delivery' || st === 'home_visit';
                                     return (
                                         <DetailRow label="Type" value={
