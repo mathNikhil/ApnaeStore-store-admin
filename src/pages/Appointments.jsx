@@ -76,13 +76,14 @@ const Appointments = () => {
         const token = localStorage.getItem('storeAdminToken');
         if (!token) { navigate(`/login${window.location.search}`); return; }
         const sid = localStorage.getItem('currentStoreId');
-        if (sid) { setStoreId(sid); fetchAppointments(sid, date); }
-        else { setLoading(false); }
+        if (sid) setStoreId(sid);
+        else setLoading(false);
     }, []);
 
+    // Re-fetch whenever date OR storeId changes — this is the single source of truth
     useEffect(() => {
         if (storeId) fetchAppointments(storeId, date);
-    }, [date]);
+    }, [date, storeId]);
 
     // Scroll now-line into view — only on today, not when navigating to past/future
     useEffect(() => {
@@ -191,11 +192,53 @@ const Appointments = () => {
     const colBookings = (staffId) =>
         filteredBookings.filter(b => staffId === null ? !b.staff_id : b.staff_id === staffId);
 
-    const renderBookingBlock = (booking, colColor) => {
+    // Detect overlaps and assign sub-column (lane) positions so cards never stack
+    const layoutBookings = (bookingList) => {
+        // Sort by start time
+        const sorted = [...bookingList].sort((a, b) => toMins(a.booking_time) - toMins(b.booking_time));
+        const lanes = []; // each lane is an array of bookings already placed
+
+        return sorted.map(booking => {
+            const start = toMins(booking.booking_time);
+            const end = start + (booking.duration_mins || 30);
+
+            // Find the first lane where this booking doesn't overlap the last entry
+            let laneIdx = lanes.findIndex(lane => {
+                const last = lane[lane.length - 1];
+                const lastEnd = toMins(last.booking_time) + (last.duration_mins || 30);
+                return lastEnd <= start;
+            });
+
+            if (laneIdx === -1) {
+                laneIdx = lanes.length;
+                lanes.push([]);
+            }
+            lanes[laneIdx].push(booking);
+
+            return { booking, laneIdx, totalLanes: 0 }; // totalLanes filled in next pass
+        }).map((item, _, arr) => {
+            // For each booking, totalLanes = how many lanes exist at that time
+            const start = toMins(item.booking.booking_time);
+            const end = start + (item.booking.duration_mins || 30);
+            const concurrent = arr.filter(other => {
+                const os = toMins(other.booking.booking_time);
+                const oe = os + (other.booking.duration_mins || 30);
+                return os < end && oe > start;
+            });
+            return { ...item, totalLanes: Math.max(concurrent.length, lanes.length > item.laneIdx ? 1 : 1) };
+        });
+    };
+
+    const renderBookingBlock = (booking, colColor, laneIdx, totalLanes) => {
         const top = ((toMins(booking.booking_time) - startMins) / 60) * SLOT_HEIGHT;
-        const height = Math.max(((booking.duration_mins || 30) / 60) * SLOT_HEIGHT, 24);
+        const height = Math.max(((booking.duration_mins || 30) / 60) * SLOT_HEIGHT, 44);
         const meta = STATUS_META[booking.booking_status] || STATUS_META.pending;
         const color = STAFF_COLORS[colColor] || STAFF_COLORS[0];
+
+        // Split column width when there are overlapping bookings
+        const pct = totalLanes > 1 ? (1 / totalLanes) : 1;
+        const leftPct = laneIdx * pct * 100;
+        const widthPct = pct * 100;
 
         return (
             <div
@@ -204,14 +247,14 @@ const Appointments = () => {
                 style={{
                     position: 'absolute',
                     top,
-                    left: 4,
-                    right: 4,
+                    left: `calc(${leftPct}% + 3px)`,
+                    width: `calc(${widthPct}% - 6px)`,
                     height,
                     background: meta.bg,
                     border: `1.5px solid ${color.border}`,
                     borderLeft: `4px solid ${color.border}`,
                     borderRadius: 6,
-                    padding: '5px 6px 5px 6px',
+                    padding: '6px 7px',
                     cursor: 'pointer',
                     overflow: 'hidden',
                     zIndex: 2,
@@ -221,18 +264,19 @@ const Appointments = () => {
                 onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.18)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
             >
+                {/* Time always shown at top */}
+                <div style={{ fontSize: 10, color: '#666', fontWeight: 600, marginBottom: 2 }}>
+                    {fmtTime(booking.booking_time)}
+                </div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {meta.icon} {booking.customer_name || booking.customer_phone || 'Customer'}
-                    {height <= 36 && (
-                        <span style={{ fontWeight: 400, color: '#555', marginLeft: 4 }}>· {fmtTime(booking.booking_time)}</span>
-                    )}
                 </div>
-                {height > 36 && (
+                {height > 52 && (
                     <div style={{ fontSize: 10, color: '#555', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {booking.service_name || '—'} · {fmtTime(booking.booking_time)}
+                        {booking.service_name || '—'}
                     </div>
                 )}
-                {height > 56 && booking.computed_price && (
+                {height > 72 && booking.computed_price && (
                     <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>₹{Number(booking.computed_price).toLocaleString()}</div>
                 )}
             </div>
@@ -466,8 +510,10 @@ const Appointments = () => {
                                                 </div>
                                             )}
 
-                                            {/* Booking blocks */}
-                                            {colBkgs.map(b => renderBookingBlock(b, cIdx))}
+                                            {/* Booking blocks — overlap-aware layout */}
+                                            {layoutBookings(colBkgs).map(({ booking, laneIdx, totalLanes }) =>
+                                                renderBookingBlock(booking, cIdx, laneIdx, totalLanes)
+                                            )}
                                         </div>
                                     );
                                 })}
