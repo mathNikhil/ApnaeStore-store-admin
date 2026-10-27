@@ -120,14 +120,7 @@ const Appointments = () => {
         }
     };
 
-    if (loading) return (
-        <div style={S.container}>
-            <Sidebar />
-            <div className="main-content" style={S.main}>
-                <div style={S.loading}>⏳ Loading appointments…</div>
-            </div>
-        </div>
-    );
+    // Loading is now an inline overlay — header/nav stay visible so Prev/Next remain clickable
 
     if (!storeId) return (
         <div style={S.container}>
@@ -261,14 +254,14 @@ const Appointments = () => {
                     </div>
                     {/* Day navigation */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <button style={S.navBtn} onClick={() => setDate(d => addDays(d, -1))}>◀ Prev</button>
+                        <button style={S.navBtn} onClick={() => setDate(prev => addDays(prev, -1))}>◀ Prev</button>
                         <input
                             type="date"
                             value={date}
                             onChange={e => setDate(e.target.value)}
                             style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 13 }}
                         />
-                        <button style={S.navBtn} onClick={() => setDate(d => addDays(d, 1))}>Next ▶</button>
+                        <button style={S.navBtn} onClick={() => setDate(prev => addDays(prev, 1))}>Next ▶</button>
                         <button
                             style={{ ...S.navBtn, background: date === todayISO() ? '#006d2f' : '#f0f2f5', color: date === todayISO() ? '#fff' : '#2d3436' }}
                             onClick={() => setDate(todayISO())}
@@ -321,7 +314,12 @@ const Appointments = () => {
                 </div>
 
                 {/* Scheduler grid — always show, even with zero bookings */}
-                {allCols.length === 0 ? (
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#888', background: '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                        <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
+                        <div style={{ fontSize: 15, fontWeight: 600 }}>Loading appointments…</div>
+                    </div>
+                ) : allCols.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
                         <div style={{ fontSize: 18, fontWeight: 600 }}>No staff configured</div>
