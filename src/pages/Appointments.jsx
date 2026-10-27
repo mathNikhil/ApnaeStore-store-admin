@@ -84,12 +84,12 @@ const Appointments = () => {
         if (storeId) fetchAppointments(storeId, date);
     }, [date]);
 
-    // Scroll now-line into view
+    // Scroll now-line into view — only on today, not when navigating to past/future
     useEffect(() => {
-        if (nowLineRef.current) {
+        if (nowLineRef.current && date === todayISO()) {
             nowLineRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
-    }, [data]);
+    }, [data, date]);
 
     const fetchAppointments = async (sid, d) => {
         setLoading(true);
@@ -159,7 +159,7 @@ const Appointments = () => {
     const hasUnassignedBookings = filteredBookings.some(b => !b.staff_id);
 
     // Grid dimensions
-    const SLOT_HEIGHT = 60; // px per hour
+    const SLOT_HEIGHT = 80; // px per hour
     const LABEL_WIDTH = 60; // time label column
     const COL_WIDTH = 180;
 
@@ -218,7 +218,7 @@ const Appointments = () => {
                     border: `1.5px solid ${color.border}`,
                     borderLeft: `4px solid ${color.border}`,
                     borderRadius: 6,
-                    padding: '3px 6px',
+                    padding: '5px 6px 5px 6px',
                     cursor: 'pointer',
                     overflow: 'hidden',
                     zIndex: 2,
@@ -230,14 +230,17 @@ const Appointments = () => {
             >
                 <div style={{ fontSize: 11, fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {meta.icon} {booking.customer_name || booking.customer_phone || 'Customer'}
+                    {height <= 36 && (
+                        <span style={{ fontWeight: 400, color: '#555', marginLeft: 4 }}>· {fmtTime(booking.booking_time)}</span>
+                    )}
                 </div>
-                {height > 40 && (
-                    <div style={{ fontSize: 10, color: '#555', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {height > 36 && (
+                    <div style={{ fontSize: 10, color: '#555', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {booking.service_name || '—'} · {fmtTime(booking.booking_time)}
                     </div>
                 )}
                 {height > 56 && booking.computed_price && (
-                    <div style={{ fontSize: 10, color: '#666', marginTop: 1 }}>₹{Number(booking.computed_price).toLocaleString()}</div>
+                    <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>₹{Number(booking.computed_price).toLocaleString()}</div>
                 )}
             </div>
         );
@@ -610,7 +613,7 @@ const S = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
     main: { flex: 1, padding: '24px', marginLeft: '240px' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12, flexWrap: 'wrap' },
-    navBtn: { padding: '8px 14px', border: '1px solid #ddd', borderRadius: 8, background: '#fff', color: '#2d3436', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+    navBtn: { padding: '8px 16px', border: '1px solid #c5cae9', borderRadius: 8, background: '#fff', color: '#2d3436', fontSize: 14, fontWeight: 600, cursor: 'pointer', userSelect: 'none' },
     statRow: { display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' },
     statCard: { flex: 1, minWidth: 90, padding: '14px 16px', borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' },
     loading: { textAlign: 'center', padding: '60px 20px', fontSize: 16, color: '#888' },
