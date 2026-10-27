@@ -417,14 +417,14 @@ const Appointments = () => {
 
                         {/* Scrollable grid body */}
                         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '65vh' }}>
-                            <div style={{ display: 'flex', position: 'relative' }}>
+                            <div style={{ display: 'flex', position: 'relative', paddingTop: 10 }}>
 
                                 {/* Time labels */}
                                 <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, position: 'relative', height: gridHeight, borderRight: '1px solid #eee', flexShrink: 0 }}>
-                                    {hours.map(h => (
+                                    {hours.map((h, i) => (
                                         <div key={h} style={{
                                             position: 'absolute',
-                                            top: ((toMins(h) - startMins) / 60) * SLOT_HEIGHT - 8,
+                                            top: ((toMins(h) - startMins) / 60) * SLOT_HEIGHT - (i === 0 ? 0 : 8),
                                             left: 0, right: 0,
                                             textAlign: 'right',
                                             paddingRight: 8,
