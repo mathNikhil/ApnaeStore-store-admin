@@ -56,9 +56,10 @@ const fmtDateHeader = (iso) => {
 };
 
 const addDays = (iso, n) => {
-    const d = new Date(iso + 'T00:00:00');
-    d.setDate(d.getDate() + n);
-    return d.toISOString().split('T')[0];
+    // Parse as UTC date parts to avoid timezone rollback on toISOString()
+    const [y, m, d] = iso.split('-').map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d + n));
+    return date.toISOString().split('T')[0];
 };
 
 const Appointments = () => {
@@ -153,7 +154,7 @@ const Appointments = () => {
     const hasUnassignedBookings = filteredBookings.some(b => !b.staff_id);
 
     // Grid dimensions
-    const SLOT_HEIGHT = 80; // px per hour
+    const SLOT_HEIGHT = 100; // px per hour — enough that 30-min slots = 50px, always room for time+name
     const LABEL_WIDTH = 60; // time label column
     const COL_WIDTH = 180;
 
@@ -231,7 +232,7 @@ const Appointments = () => {
 
     const renderBookingBlock = (booking, colColor, laneIdx, totalLanes) => {
         const top = ((toMins(booking.booking_time) - startMins) / 60) * SLOT_HEIGHT;
-        const height = Math.max(((booking.duration_mins || 30) / 60) * SLOT_HEIGHT, 44);
+        const height = Math.max(((booking.duration_mins || 30) / 60) * SLOT_HEIGHT, 54);
         const meta = STATUS_META[booking.booking_status] || STATUS_META.pending;
         const color = STAFF_COLORS[colColor] || STAFF_COLORS[0];
 
@@ -271,12 +272,12 @@ const Appointments = () => {
                 <div style={{ fontSize: 11, fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {meta.icon} {booking.customer_name || booking.customer_phone || 'Customer'}
                 </div>
-                {height > 52 && (
+                {height > 46 && (
                     <div style={{ fontSize: 10, color: '#555', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {booking.service_name || '—'}
                     </div>
                 )}
-                {height > 72 && booking.computed_price && (
+                {height > 78 && booking.computed_price && (
                     <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>₹{Number(booking.computed_price).toLocaleString()}</div>
                 )}
             </div>
