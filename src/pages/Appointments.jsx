@@ -148,10 +148,24 @@ const Appointments = () => {
     const staffColorMap = {};
     staff.forEach((s, i) => { staffColorMap[s.id] = i % STAFF_COLORS.length; });
 
-    // Columns: one per active staff + one "Unassigned" if any bookings lack a staff_id
+    // Build a name→id lookup so bookings whose staff_id is null but staff_name is set
+    // still land in the right column (handles case where name lookup failed at order time)
+    const staffNameToId = {};
+    staff.forEach(s => { staffNameToId[s.name?.trim().toLowerCase()] = s.id; });
+
+    // Normalise bookings: if staff_id is null but staff_name matches a known staff member, fix it
+    const normalisedBookings = filteredBookings.map(b => {
+        if (!b.staff_id && b.staff_name) {
+            const resolvedId = staffNameToId[b.staff_name.trim().toLowerCase()];
+            if (resolvedId) return { ...b, staff_id: resolvedId };
+        }
+        return b;
+    });
+
+    // Columns: one per active staff + Unassigned only if bookings truly have no matching staff
     const cols = [...staff];
     const unassignedCol = { id: null, name: 'Unassigned' };
-    const hasUnassignedBookings = filteredBookings.some(b => !b.staff_id);
+    const hasUnassignedBookings = normalisedBookings.some(b => !b.staff_id);
 
     // Grid dimensions
     const SLOT_HEIGHT = 100; // px per hour — enough that 30-min slots = 50px, always room for time+name
@@ -189,9 +203,9 @@ const Appointments = () => {
         .filter(b => b.booking_status !== 'cancelled')
         .reduce((s, b) => s + Number(b.computed_price || b.total_amount || 0), 0);
 
-    // Build booking → column mapping
+    // Build booking → column mapping (uses normalised bookings so name-resolved staff land correctly)
     const colBookings = (staffId) =>
-        filteredBookings.filter(b => staffId === null ? !b.staff_id : b.staff_id === staffId);
+        normalisedBookings.filter(b => staffId === null ? !b.staff_id : b.staff_id === staffId);
 
     // Detect overlaps and assign sub-column (lane) positions so cards never stack
     const layoutBookings = (bookingList) => {
