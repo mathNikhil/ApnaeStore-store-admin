@@ -119,7 +119,7 @@ const generateSchedulePDF = async ({ date, staff, bookings, workStart, workEnd, 
         } else {
             // Table header
             checkY(8);
-            const cols = { time: MARGIN, customer: MARGIN + 22, service: MARGIN + 68, dur: MARGIN + 120, price: MARGIN + 140, status: MARGIN + 162 };
+            const cols = { time: MARGIN, customer: MARGIN + 22, service: MARGIN + 78, dur: MARGIN + 140, status: MARGIN + 158 };
             doc.setFillColor(245, 245, 245);
             doc.rect(MARGIN, y, COL_W, 6, 'F');
             doc.setFont('helvetica', 'bold');
@@ -129,7 +129,6 @@ const generateSchedulePDF = async ({ date, staff, bookings, workStart, workEnd, 
             doc.text('CUSTOMER', cols.customer, y + 4);
             doc.text('SERVICE', cols.service, y + 4);
             doc.text('MIN', cols.dur, y + 4);
-            doc.text('PRICE', cols.price, y + 4);
             doc.text('STATUS', cols.status, y + 4);
             y += 7;
 
@@ -157,7 +156,6 @@ const generateSchedulePDF = async ({ date, staff, bookings, workStart, workEnd, 
                 doc.text(String(b.duration_mins || 30), cols.dur, y + 5);
 
                 const price = b.computed_price || b.total_amount;
-                doc.text(price ? `₹${Number(price).toLocaleString()}` : '—', cols.price, y + 5);
 
                 const statusTxt = STATUS_LABEL[b.booking_status] || b.booking_status || '—';
                 const statusColors = {
