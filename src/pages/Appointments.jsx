@@ -3,6 +3,222 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
 
+// ─── PDF Generation (staff-wise daily schedule) ───────────────────────────
+// Pure client-side via jsPDF loaded from CDN — no backend needed.
+// Called from the "Download PDF" button; dynamically loads jsPDF on first use.
+
+const loadJsPDF = () => new Promise((resolve, reject) => {
+    if (window.jspdf?.jsPDF) { resolve(window.jspdf.jsPDF); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = () => resolve(window.jspdf.jsPDF);
+    script.onerror = reject;
+    document.head.appendChild(script);
+});
+
+const generateSchedulePDF = async ({ date, staff, bookings, workStart, workEnd, storeName }) => {
+    const JsPDF = await loadJsPDF();
+    const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const PAGE_W = 210;
+    const MARGIN = 14;
+    const COL_W = PAGE_W - MARGIN * 2;
+
+    const fmtT = (t) => {
+        if (!t) return '';
+        const [h, m] = t.split(':').map(Number);
+        const ap = h >= 12 ? 'PM' : 'AM';
+        return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ap}`;
+    };
+
+    const fmtDate = (iso) => {
+        const d = new Date(iso + 'T00:00:00');
+        return d.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
+    // Build staff name → id lookup
+    const staffNameToId = {};
+    staff.forEach(s => { staffNameToId[s.name?.trim().toLowerCase()] = s.id; });
+
+    // Normalise & sort bookings per staff
+    const bookingsForStaff = (staffId) => bookings
+        .map(b => {
+            if (!b.staff_id && b.staff_name) {
+                const rid = staffNameToId[b.staff_name.trim().toLowerCase()];
+                if (rid) return { ...b, staff_id: rid };
+            }
+            return b;
+        })
+        .filter(b => b.staff_id === staffId)
+        .sort((a, b) => a.booking_time?.localeCompare(b.booking_time));
+
+    const STATUS_LABEL = {
+        pending: 'Pending', confirmed: 'Confirmed', in_session: 'In Session',
+        completed: 'Completed', cancelled: 'Cancelled', no_show: 'No Show',
+    };
+
+    let y = MARGIN;
+    let pageNum = 1;
+
+    const addPage = () => {
+        doc.addPage();
+        pageNum++;
+        y = MARGIN;
+    };
+
+    const checkY = (needed = 10) => {
+        if (y + needed > 280) addPage();
+    };
+
+    // ── Cover header ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(0, 80, 0);
+    doc.text(storeName || 'Daily Schedule', MARGIN, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Schedule for: ${fmtDate(date)}   |   Hours: ${fmtT(workStart)} – ${fmtT(workEnd)}`, MARGIN, y);
+    y += 4;
+
+    doc.setDrawColor(0, 109, 47);
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 6;
+
+    // ── One section per staff member ──
+    const staffList = staff.length > 0 ? staff : [{ id: null, name: 'Unassigned' }];
+
+    staffList.forEach((s, si) => {
+        const appts = bookingsForStaff(s.id);
+
+        checkY(24);
+
+        // Staff name heading
+        doc.setFillColor(232, 245, 233);
+        doc.roundedRect(MARGIN, y, COL_W, 10, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(27, 94, 32);
+        doc.text(`👤  ${s.name}${s._deleted ? ' (Deleted)' : ''}`, MARGIN + 3, y + 7);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`${appts.length} appointment${appts.length !== 1 ? 's' : ''}`, PAGE_W - MARGIN - 2, y + 7, { align: 'right' });
+        y += 13;
+
+        if (appts.length === 0) {
+            checkY(8);
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(9);
+            doc.setTextColor(170, 170, 170);
+            doc.text('No appointments today', MARGIN + 4, y);
+            y += 8;
+        } else {
+            // Table header
+            checkY(8);
+            const cols = { time: MARGIN, customer: MARGIN + 22, service: MARGIN + 68, dur: MARGIN + 120, price: MARGIN + 140, status: MARGIN + 162 };
+            doc.setFillColor(245, 245, 245);
+            doc.rect(MARGIN, y, COL_W, 6, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text('TIME', cols.time + 1, y + 4);
+            doc.text('CUSTOMER', cols.customer, y + 4);
+            doc.text('SERVICE', cols.service, y + 4);
+            doc.text('MIN', cols.dur, y + 4);
+            doc.text('PRICE', cols.price, y + 4);
+            doc.text('STATUS', cols.status, y + 4);
+            y += 7;
+
+            appts.forEach((b, bi) => {
+                checkY(8);
+                const rowBg = bi % 2 === 0 ? [255, 255, 255] : [250, 250, 250];
+                doc.setFillColor(...rowBg);
+                doc.rect(MARGIN, y, COL_W, 7, 'F');
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8.5);
+                doc.setTextColor(0, 80, 0);
+                doc.text(fmtT(b.booking_time), cols.time + 1, y + 5);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(30, 30, 30);
+                const custName = (b.customer_name || b.customer_phone || 'Customer').substring(0, 20);
+                doc.text(custName, cols.customer, y + 5);
+
+                doc.setTextColor(60, 60, 60);
+                const svcName = (b.service_name || '—').substring(0, 22);
+                doc.text(svcName, cols.service, y + 5);
+
+                doc.setTextColor(80, 80, 80);
+                doc.text(String(b.duration_mins || 30), cols.dur, y + 5);
+
+                const price = b.computed_price || b.total_amount;
+                doc.text(price ? `₹${Number(price).toLocaleString()}` : '—', cols.price, y + 5);
+
+                const statusTxt = STATUS_LABEL[b.booking_status] || b.booking_status || '—';
+                const statusColors = {
+                    completed: [46, 125, 50], confirmed: [21, 101, 192], pending: [230, 81, 0],
+                    cancelled: [198, 40, 40], in_session: [46, 125, 50], no_show: [97, 97, 97],
+                };
+                const sc = statusColors[b.booking_status] || [80, 80, 80];
+                doc.setTextColor(...sc);
+                doc.setFont('helvetica', 'bold');
+                doc.text(statusTxt, cols.status, y + 5);
+                doc.setFont('helvetica', 'normal');
+
+                // Home visit badge
+                const isHome = b.service_type === 'homevisit' || b.service_type === 'home_visit' || b.service_type === 'delivery';
+                if (isHome) {
+                    doc.setTextColor(200, 80, 0);
+                    doc.setFontSize(7);
+                    doc.text('🏠', PAGE_W - MARGIN - 3, y + 5);
+                    doc.setFontSize(8.5);
+                }
+
+                // light row separator
+                doc.setDrawColor(230, 230, 230);
+                doc.setLineWidth(0.2);
+                doc.line(MARGIN, y + 7, PAGE_W - MARGIN, y + 7);
+                y += 7;
+            });
+
+            // Staff total row
+            checkY(8);
+            const staffRevenue = appts
+                .filter(b => b.booking_status !== 'cancelled')
+                .reduce((sum, b) => sum + Number(b.computed_price || b.total_amount || 0), 0);
+            doc.setFillColor(240, 248, 240);
+            doc.rect(MARGIN, y, COL_W, 7, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8.5);
+            doc.setTextColor(0, 80, 0);
+            doc.text(`Total: ${appts.length} appt${appts.length !== 1 ? 's' : ''}  ·  Est. Revenue: ₹${staffRevenue.toLocaleString()}`, MARGIN + 3, y + 5);
+            y += 10;
+        }
+
+        // Gap between staff sections
+        y += 3;
+    });
+
+    // ── Footer on every page ──
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(170, 170, 170);
+        doc.text(`Generated ${new Date().toLocaleString('en-IN')}   ·   Page ${p} of ${totalPages}`, MARGIN, 292);
+        doc.line(MARGIN, 289, PAGE_W - MARGIN, 289);
+    }
+
+    const fileName = `schedule_${date}_${(storeName || 'store').replace(/\s+/g, '_')}.pdf`;
+    doc.save(fileName);
+};
+
 // Staff color palette — first 10 slots
 const STAFF_COLORS = [
     { bg: '#e8f5e9', border: '#43a047', text: '#1b5e20', dot: '#43a047' },
@@ -71,6 +287,7 @@ const Appointments = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedBooking, setSelectedBooking] = useState(null); // detail modal
     const [updating, setUpdating] = useState(false);
+    const [pdfGenerating, setPdfGenerating] = useState(false);
     const nowLineRef = useRef(null);
 
     useEffect(() => {
@@ -136,6 +353,7 @@ const Appointments = () => {
 
     const bookings = data?.bookings || [];
     const staff = data?.staff || [];
+    const deletedStaff = (data?.deletedStaff || []).map(s => ({ ...s, _deleted: true }));
     const workStart = data?.workStart || '09:00';
     const workEnd = data?.workEnd || '20:00';
 
@@ -144,14 +362,14 @@ const Appointments = () => {
         ? bookings
         : bookings.filter(b => b.booking_status === statusFilter);
 
-    // Build staff index (id → color index)
+    // Build staff index (id → color index) — includes deleted staff so their bookings get a color
     const staffColorMap = {};
-    staff.forEach((s, i) => { staffColorMap[s.id] = i % STAFF_COLORS.length; });
+    [...staff, ...deletedStaff].forEach((s, i) => { staffColorMap[s.id] = i % STAFF_COLORS.length; });
 
     // Build a name→id lookup so bookings whose staff_id is null but staff_name is set
     // still land in the right column (handles case where name lookup failed at order time)
     const staffNameToId = {};
-    staff.forEach(s => { staffNameToId[s.name?.trim().toLowerCase()] = s.id; });
+    [...staff, ...deletedStaff].forEach(s => { staffNameToId[s.name?.trim().toLowerCase()] = s.id; });
 
     // Normalise bookings: if staff_id is null but staff_name matches a known staff member, fix it
     const normalisedBookings = filteredBookings.map(b => {
@@ -162,8 +380,8 @@ const Appointments = () => {
         return b;
     });
 
-    // Columns: one per active staff + Unassigned only if bookings truly have no matching staff
-    const cols = [...staff];
+    // Columns: active staff first, then deleted staff with past bookings, then Unassigned if needed
+    const cols = [...staff, ...deletedStaff];
     const unassignedCol = { id: null, name: 'Unassigned' };
     const hasUnassignedBookings = normalisedBookings.some(b => !b.staff_id);
 
@@ -326,6 +544,40 @@ const Appointments = () => {
                             onClick={() => setDate(todayISO())}
                         >Today</button>
                         <button style={S.navBtn} onClick={() => fetchAppointments(storeId, date)}>🔄</button>
+                        <button
+                            style={{
+                                ...S.navBtn,
+                                background: pdfGenerating ? '#e8f5e9' : '#006d2f',
+                                color: pdfGenerating ? '#006d2f' : '#fff',
+                                border: '1px solid #006d2f',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                opacity: pdfGenerating || loading ? 0.7 : 1,
+                                cursor: pdfGenerating || loading ? 'default' : 'pointer',
+                            }}
+                            disabled={pdfGenerating || loading || bookings.length === 0}
+                            title={bookings.length === 0 ? 'No appointments to export' : 'Download staff-wise PDF schedule'}
+                            onClick={async () => {
+                                if (pdfGenerating || loading) return;
+                                setPdfGenerating(true);
+                                try {
+                                    await generateSchedulePDF({
+                                        date,
+                                        staff: [...staff, ...deletedStaff],
+                                        bookings,
+                                        workStart,
+                                        workEnd,
+                                        storeName: localStorage.getItem('storeName') || '',
+                                    });
+                                } catch (e) {
+                                    console.error('PDF generation failed:', e);
+                                    alert('PDF generation failed. Please try again.');
+                                } finally {
+                                    setPdfGenerating(false);
+                                }
+                            }}
+                        >
+                            {pdfGenerating ? '⏳ Generating…' : '⬇️ Download PDF'}
+                        </button>
                     </div>
                 </div>
 
@@ -402,10 +654,11 @@ const Appointments = () => {
                                             minWidth: COL_WIDTH,
                                             padding: '12px 16px',
                                             borderRight: '1px solid #eee',
-                                            background: c.bg,
+                                            background: s._deleted ? '#fafafa' : c.bg,
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 8,
+                                            opacity: s._deleted ? 0.75 : 1,
                                         }}
                                     >
                                         <div style={{
@@ -417,10 +670,19 @@ const Appointments = () => {
                                             {s.name?.[0]?.toUpperCase() || '?'}
                                         </div>
                                         <div>
-                                            <div style={{ fontWeight: 700, fontSize: 13, color: c.text }}>{s.name}</div>
+                                            <div style={{ fontWeight: 700, fontSize: 13, color: s._deleted ? '#999' : c.text, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                {s.name}
+                                                {s._deleted && (
+                                                    <span style={{
+                                                        fontSize: 10, fontWeight: 600, padding: '1px 6px',
+                                                        borderRadius: 10, background: '#fee2e2', color: '#dc2626',
+                                                        letterSpacing: '0.03em', textTransform: 'uppercase',
+                                                    }}>Deleted</span>
+                                                )}
+                                            </div>
                                             {s.id && (
                                                 <div style={{ fontSize: 11, color: '#888' }}>
-                                                    {colBookings(s.id).length} appt{colBookings(s.id).length !== 1 ? 's' : ''}
+                                                    {colBookings(s.id).length} appt{colBookings(s.id).length !== 1 ? 's' : ''}{s._deleted ? ' · audit only' : ''}
                                                 </div>
                                             )}
                                         </div>
