@@ -288,6 +288,9 @@ const Appointments = () => {
     const [selectedBooking, setSelectedBooking] = useState(null); // detail modal
     const [updating, setUpdating] = useState(false);
     const [pdfGenerating, setPdfGenerating] = useState(false);
+    const [showPdfModal, setShowPdfModal] = useState(false);
+    const [pdfDate, setPdfDate] = useState(todayISO());
+    const [pdfStaffId, setPdfStaffId] = useState('all'); // 'all' or staff id
     const nowLineRef = useRef(null);
 
     useEffect(() => {
@@ -547,36 +550,14 @@ const Appointments = () => {
                         <button
                             style={{
                                 ...S.navBtn,
-                                background: pdfGenerating ? '#e8f5e9' : '#006d2f',
-                                color: pdfGenerating ? '#006d2f' : '#fff',
+                                background: '#006d2f',
+                                color: '#fff',
                                 border: '1px solid #006d2f',
                                 display: 'flex', alignItems: 'center', gap: 6,
-                                opacity: pdfGenerating || loading ? 0.7 : 1,
-                                cursor: pdfGenerating || loading ? 'default' : 'pointer',
                             }}
-                            disabled={pdfGenerating || loading || bookings.length === 0}
-                            title={bookings.length === 0 ? 'No appointments to export' : 'Download staff-wise PDF schedule'}
-                            onClick={async () => {
-                                if (pdfGenerating || loading) return;
-                                setPdfGenerating(true);
-                                try {
-                                    await generateSchedulePDF({
-                                        date,
-                                        staff: [...staff, ...deletedStaff],
-                                        bookings,
-                                        workStart,
-                                        workEnd,
-                                        storeName: localStorage.getItem('storeName') || '',
-                                    });
-                                } catch (e) {
-                                    console.error('PDF generation failed:', e);
-                                    alert('PDF generation failed. Please try again.');
-                                } finally {
-                                    setPdfGenerating(false);
-                                }
-                            }}
+                            onClick={() => { setPdfDate(date); setPdfStaffId('all'); setShowPdfModal(true); }}
                         >
-                            {pdfGenerating ? '⏳ Generating…' : '⬇️ Download PDF'}
+                            ⬇️ Download PDF
                         </button>
                     </div>
                 </div>
@@ -915,6 +896,112 @@ const Appointments = () => {
                                     ))}
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── PDF Download Modal ── */}
+                {showPdfModal && (
+                    <div
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={e => { if (e.target === e.currentTarget) setShowPdfModal(false); }}
+                    >
+                        <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 400, maxWidth: '92vw', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <h2 style={{ margin: 0, fontSize: 17 }}>⬇️ Download Schedule PDF</h2>
+                                <button onClick={() => setShowPdfModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#999' }}>×</button>
+                            </div>
+
+                            {/* Date picker */}
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ fontSize: 12, fontWeight: 700, color: '#555', display: 'block', marginBottom: 6 }}>SELECT DATE</label>
+                                <input
+                                    type="date"
+                                    value={pdfDate}
+                                    onChange={e => setPdfDate(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                                />
+                            </div>
+
+                            {/* Staff picker */}
+                            <div style={{ marginBottom: 24 }}>
+                                <label style={{ fontSize: 12, fontWeight: 700, color: '#555', display: 'block', marginBottom: 6 }}>SELECT STAFF</label>
+                                <select
+                                    value={pdfStaffId}
+                                    onChange={e => setPdfStaffId(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', background: '#fff' }}
+                                >
+                                    <option value="all">All Staff (full day sheet)</option>
+                                    {[...staff, ...deletedStaff].map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name}{s._deleted ? ' (Deleted)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Note about date vs loaded data */}
+                            {pdfDate !== date && (
+                                <div style={{ background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#e65100' }}>
+                                    ⚠️ You selected a different date than what's loaded. The PDF will fetch that day's appointments from the server.
+                                </div>
+                            )}
+
+                            <button
+                                disabled={pdfGenerating}
+                                onClick={async () => {
+                                    setPdfGenerating(true);
+                                    try {
+                                        // If selected date differs from loaded date, fetch that date's data first
+                                        let targetBookings = bookings;
+                                        let targetWorkStart = workStart;
+                                        let targetWorkEnd = workEnd;
+                                        let targetStaff = [...staff, ...deletedStaff];
+
+                                        if (pdfDate !== date) {
+                                            const res = await storeAdminAPI.getAppointments(storeId, pdfDate);
+                                            if (res.success) {
+                                                targetBookings = res.data.bookings || [];
+                                                targetWorkStart = res.data.workStart || workStart;
+                                                targetWorkEnd = res.data.workEnd || workEnd;
+                                                targetStaff = [
+                                                    ...(res.data.staff || []),
+                                                    ...(res.data.deletedStaff || []).map(s => ({ ...s, _deleted: true })),
+                                                ];
+                                            }
+                                        }
+
+                                        // Filter to one staff if selected
+                                        const filteredStaff = pdfStaffId === 'all'
+                                            ? targetStaff
+                                            : targetStaff.filter(s => String(s.id) === String(pdfStaffId));
+
+                                        await generateSchedulePDF({
+                                            date: pdfDate,
+                                            staff: filteredStaff,
+                                            bookings: targetBookings,
+                                            workStart: targetWorkStart,
+                                            workEnd: targetWorkEnd,
+                                            storeName: localStorage.getItem('storeName') || '',
+                                        });
+                                        setShowPdfModal(false);
+                                    } catch (e) {
+                                        console.error('PDF generation failed:', e);
+                                        alert('PDF generation failed. Please try again.');
+                                    } finally {
+                                        setPdfGenerating(false);
+                                    }
+                                }}
+                                style={{
+                                    width: '100%', padding: '12px',
+                                    background: pdfGenerating ? '#e8f5e9' : '#006d2f',
+                                    color: pdfGenerating ? '#006d2f' : '#fff',
+                                    border: 'none', borderRadius: 10,
+                                    fontSize: 15, fontWeight: 700, cursor: pdfGenerating ? 'default' : 'pointer',
+                                }}
+                            >
+                                {pdfGenerating ? '⏳ Generating PDF…' : '⬇️ Download PDF'}
+                            </button>
                         </div>
                     </div>
                 )}
