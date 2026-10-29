@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
+import useStaffAccess from '../hooks/useStaffAccess';
 
 const OrderDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { canEdit } = useStaffAccess('orders');
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedStatus, setSelectedStatus] = useState('');
@@ -232,11 +234,12 @@ const OrderDetail = () => {
                     </div>
                 </div>
 
+                {canEdit && (
                 <div style={styles.statusUpdateCard}>
                     <h3 style={styles.cardTitle}>🔧 Update Order Status</h3>
                     <div style={styles.statusUpdateRow}>
-                        <select 
-                            value={selectedStatus} 
+                        <select
+                            value={selectedStatus}
                             onChange={(e) => setSelectedStatus(e.target.value)}
                             style={styles.statusSelect}
                         >
@@ -246,7 +249,7 @@ const OrderDetail = () => {
                                 </option>
                             ))}
                         </select>
-                        <button 
+                        <button
                             style={styles.updateBtn}
                             onClick={handleStatusUpdate}
                             disabled={selectedStatus === order.status}
@@ -260,6 +263,7 @@ const OrderDetail = () => {
                         </span>
                     </div>
                 </div>
+                )}
 
                 {showCourierForm && (
                     <div style={{...styles.statusUpdateCard, border: '2px solid #2ecc71'}}>

@@ -300,7 +300,8 @@ const Orders = () => {
                                     <td style={styles.td}>
                                         <div style={styles.actionButtons}>
                                             <button style={styles.viewBtn} onClick={() => navigate(`/orders/${order.id}`)}>View</button>
-                                            <select 
+                                            {canEdit && (
+                                            <select
                                                 style={styles.statusSelect}
                                                 onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
                                                 defaultValue=""
@@ -312,6 +313,7 @@ const Orders = () => {
                                                     </option>
                                                 ))}
                                             </select>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
