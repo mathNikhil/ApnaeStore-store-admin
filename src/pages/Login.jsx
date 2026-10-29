@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { storeAdminAuthAPI } from '../services/api';
 
@@ -14,74 +14,85 @@ const Login = () => {
     const [lockedOut, setLockedOut] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [cooldownEnds, setCooldownEnds] = useState(null);
-    const passwordRef = useRef(null);
-    const googleBtnRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         setSubdomain(params.get('store'));
-        setTimeout(() => {
-            if (passwordRef.current) passwordRef.current.value = '';
-            setPassword('');
-        }, 100);
+        setTimeout(() => { setPassword(''); }, 100);
     }, []);
 
-    // Load Google Identity Services and render sign-in button when staff tab is active
+    // Handle Google OAuth redirect callback (token in URL hash from redirect flow)
     useEffect(() => {
-        if (mode !== 'staff' || !subdomain) return;
-        if (!GOOGLE_CLIENT_ID) return;
+        const params = new URLSearchParams(window.location.search);
+        const storeParam = params.get('store');
+        if (storeParam) setSubdomain(storeParam);
 
-        const loadGIS = () => {
-            if (window.google?.accounts?.id) {
-                initGIS();
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
-            script.onload = initGIS;
-            document.head.appendChild(script);
-        };
+        // Check for google_credential in URL (posted back after redirect)
+        const credential = params.get('google_credential');
+        const storeForCred = params.get('store_for_cred');
+        if (credential && storeForCred) {
+            // Clean URL
+            window.history.replaceState({}, '', `/login?store=${storeForCred}`);
+            handleGoogleCredential(credential, storeForCred);
+        }
+    }, []);
 
-        const initGIS = () => {
-            if (!window.google?.accounts?.id) return;
-            window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleCredential,
-                auto_select: false,
-            });
-            if (googleBtnRef.current) {
-                window.google.accounts.id.renderButton(googleBtnRef.current, {
-                    theme: 'outline',
-                    size: 'large',
-                    width: 320,
-                    text: 'signin_with',
-                });
-            }
-        };
+    // Launch Google OAuth — redirect mode (works on all browsers including mobile)
+    const handleGoogleSignIn = () => {
+        if (!GOOGLE_CLIENT_ID || !subdomain) return;
+        setGoogleLoading(true);
+        setError('');
 
-        loadGIS();
-    }, [mode, subdomain]);
+        // redirect_uri must be registered in Google Cloud Console
+        const redirectUri = `${window.location.origin}/login`;
+        const state = encodeURIComponent(subdomain);
+        const params = new URLSearchParams({
+            client_id: GOOGLE_CLIENT_ID,
+            redirect_uri: redirectUri,
+            response_type: 'token id_token',
+            scope: 'openid email profile',
+            nonce: Math.random().toString(36).slice(2),
+            state,
+            prompt: 'select_account',
+        });
+        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    };
 
-    const handleGoogleCredential = async (response) => {
+    // Handle id_token from URL fragment after redirect
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const hashParams = new URLSearchParams(hash.slice(1));
+        const idToken = hashParams.get('id_token');
+        const state = hashParams.get('state');
+        if (idToken && state) {
+            const store = decodeURIComponent(state);
+            // Clean the URL fragment
+            window.history.replaceState({}, '', `/login?store=${store}`);
+            setSubdomain(store);
+            handleGoogleCredential(idToken, store);
+        }
+    }, []);
+
+    const handleGoogleCredential = async (credential, store) => {
+        const storeToUse = store || subdomain;
         setGoogleLoading(true);
         setError('');
         try {
-            const result = await storeAdminAuthAPI.staffGoogleLogin(subdomain, response.credential);
+            const result = await storeAdminAuthAPI.staffGoogleLogin(storeToUse, credential);
             if (result.success) {
                 localStorage.setItem('storeAdminToken', result.data.token);
                 localStorage.setItem('currentStoreId', result.data.storeId);
                 localStorage.setItem('currentStoreName', result.data.storeName || '');
-                localStorage.setItem('currentStoreSubdomain', subdomain);
+                localStorage.setItem('currentStoreSubdomain', storeToUse);
                 localStorage.setItem('storeAdminRole', 'staff');
                 localStorage.setItem('storeAdminStaffId', result.data.staffId);
                 localStorage.setItem('storeAdminStaffName', result.data.staffName || '');
                 localStorage.setItem('storeAdminStaffEmail', result.data.staffEmail || '');
                 localStorage.setItem('storeAdminPermissions', JSON.stringify(result.data.permissions || []));
                 const perms = result.data.permissions || [];
-                navigate('/' + (perms[0] || 'dashboard'));
+                navigate('/' + (perms[0]?.page || 'dashboard'));
             } else {
                 setError(result.error || 'Google login failed. Your account may not have access to this store.');
             }
@@ -190,7 +201,6 @@ const Login = () => {
                             <label style={s.label}>Password</label>
                             <input
                                 type="password"
-                                ref={passwordRef}
                                 value={password}
                                 autoComplete="new-password"
                                 onChange={(e) => setPassword(e.target.value)}
@@ -213,9 +223,21 @@ const Login = () => {
                                 Sign in with the Google account your store owner linked to your staff profile.
                             </p>
                             {googleLoading ? (
-                                <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Verifying...</div>
+                                <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Signing in...</div>
                             ) : (
-                                <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center' }} />
+                                <button
+                                    type="button"
+                                    onClick={handleGoogleSignIn}
+                                    disabled={!GOOGLE_CLIENT_ID || !subdomain}
+                                    style={s.googleBtn}
+                                >
+                                    <img
+                                        src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                                        alt="Google"
+                                        style={{ width: '20px', height: '20px', flexShrink: 0 }}
+                                    />
+                                    Sign in with Google
+                                </button>
                             )}
                             {!GOOGLE_CLIENT_ID && (
                                 <div style={{ ...s.errorBox, marginTop: '12px' }}>
@@ -251,6 +273,7 @@ const s = {
     footer: { textAlign: 'center', marginTop: '16px', color: '#999', fontSize: '12px' },
     googleSection: { padding: '16px 0' },
     googleHint: { textAlign: 'center', color: '#555', fontSize: '13px', marginBottom: '20px', lineHeight: '1.5' },
+    googleBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', width: '100%', padding: '12px 16px', background: '#fff', color: '#3c4043', border: '1px solid #dadce0', borderRadius: '4px', fontSize: '15px', fontWeight: '500', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
 };
 
 export default Login;
