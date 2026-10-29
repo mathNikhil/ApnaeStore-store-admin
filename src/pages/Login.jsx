@@ -81,7 +81,8 @@ const Login = () => {
                 localStorage.setItem('storeAdminStaffEmail', result.data.staffEmail || '');
                 localStorage.setItem('storeAdminPermissions', JSON.stringify(result.data.permissions || []));
                 const perms = result.data.permissions || [];
-                navigate('/' + (perms[0]?.page || 'dashboard'));
+                const firstPage = perms[0]?.page || 'dashboard';
+                window.location.href = '/' + firstPage;
             } else {
                 setError(result.error || 'Google login failed. Your account may not have access to this store.');
             }
