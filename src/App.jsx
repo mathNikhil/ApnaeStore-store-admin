@@ -58,11 +58,18 @@ const App = () => {
         if (tp.get('storeId')) localStorage.setItem('currentStoreId', tp.get('storeId'));
         if (tp.get('subdomain')) localStorage.setItem('currentStoreSubdomain', tp.get('subdomain'));
     } else if (urlSubdomain && storedSubdomain && urlSubdomain !== storedSubdomain) {
+        // Only clear if BOTH are present and genuinely differ (different store)
+        // Do NOT clear when urlSubdomain is absent (e.g. after navigating to /orders)
         localStorage.removeItem('storeAdminToken');
         localStorage.removeItem('storeAdminUser');
         localStorage.removeItem('currentStoreId');
         localStorage.removeItem('currentStoreName');
         localStorage.removeItem('currentStoreSubdomain');
+        localStorage.removeItem('storeAdminRole');
+        localStorage.removeItem('storeAdminStaffId');
+        localStorage.removeItem('storeAdminStaffName');
+        localStorage.removeItem('storeAdminStaffEmail');
+        localStorage.removeItem('storeAdminPermissions');
     }
 
     const isAuthenticated = !!localStorage.getItem('storeAdminToken') && !!localStorage.getItem('currentStoreId');
