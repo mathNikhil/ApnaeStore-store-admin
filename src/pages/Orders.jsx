@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
+import useStaffAccess from '../hooks/useStaffAccess';
 
 const Orders = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { canEdit } = useStaffAccess('orders');
     const [orders, setOrders] = useState([]);
     const [filteredOrders, setFilteredOrders] = useState([]);
     const [search, setSearch] = useState('');
@@ -166,7 +168,7 @@ const Orders = () => {
                         <h1>📋 Orders</h1>
                         <p style={{color:'#8e9eab',marginTop:'4px'}}>Manage and track all orders</p>
                     </div>
-                    <button style={styles.exportBtn} onClick={() => {
+                    {canEdit && <button style={styles.exportBtn} onClick={() => {
                         const rows = [
                             ['Order ID', 'Date', 'Customer', 'Phone', 'Order Type', 'Items Detail', 'Amount', 'Items Count', 'Status', 'Payment Method', 'Payment Status'],
                             ...orders.map(o => [
@@ -193,7 +195,7 @@ const Orders = () => {
                         URL.revokeObjectURL(url);
                     }}>
                         📥 Export CSV
-                    </button>
+                    </button>}
                 </div>
 
                 <div style={styles.searchBar}>

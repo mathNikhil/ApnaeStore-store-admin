@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import PrintQRModal from '../components/qr/PrintQRModal';
+import useStaffAccess from '../hooks/useStaffAccess';
 
 const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
 
 const Inventory = () => {
+    const { canEdit } = useStaffAccess('inventory');
     const storeId = localStorage.getItem('currentStoreId');
     const token = localStorage.getItem('storeAdminToken');
     const hdrs = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -197,12 +199,14 @@ const Inventory = () => {
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button onClick={handleSync} disabled={syncing} style={styles.btnSecondary}>{syncing ? 'Syncing...' : '🔄 Sync'}</button>
-                        <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download XLSX</button>
+                        {canEdit && <button onClick={handleDownloadCSV} style={styles.btnSecondary}>⬇️ Download XLSX</button>}
+                        {canEdit && (
                         <label style={{...styles.btnSecondary, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:4}}>
                             ⬆️ Upload XLSX
                             <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleUploadXLSX} />
                         </label>
-                        <button onClick={handleDownloadTallyCSV} style={{...styles.btnSecondary, borderColor:'#0066cc', color:'#0066cc'}}>📊 Download for Tally</button>
+                        )}
+                        {canEdit && <button onClick={handleDownloadTallyCSV} style={{...styles.btnSecondary, borderColor:'#0066cc', color:'#0066cc'}}>📊 Download for Tally</button>}
                         {qrActive && (
                             <button
                                 onClick={() => setShowPrintQR(true)}
@@ -309,7 +313,7 @@ const Inventory = () => {
                                                 <td style={{ ...styles.td, position: "sticky", left: 300, background: "inherit", zIndex: 1, minWidth: 80 }}>{item.size_label}</td>
                                                 <td style={{ ...styles.td, position: "sticky", left: 380, background: "inherit", zIndex: 1, minWidth: 60, color: "#556067", fontSize: 12 }}>{(item.size_label||"").replace(/^[\d.]+\s*/, "")}</td>
                                                 <td style={styles.td}>
-                                                    {editingTallyId === item.id ? (
+                                                    {canEdit && editingTallyId === item.id ? (
                                                         <div style={{ display: 'flex', gap: 4 }}>
                                                             <input type="text" value={tallyValue} onChange={e => setTallyValue(e.target.value)}
                                                                 style={{ width: 120, border: '2px solid #006d2f', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
@@ -319,15 +323,15 @@ const Inventory = () => {
                                                             <button onClick={() => setEditingTallyId(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✕</button>
                                                         </div>
                                                     ) : (
-                                                        <span onClick={() => { setEditingTallyId(item.id); setTallyValue(item.tally_item_name || ''); }}
-                                                            style={{ background: item.tally_item_name ? '#f0faf4' : '#f9fafb', color: item.tally_item_name ? '#006d2f' : '#9ca3af', padding: '4px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'inline-block', minWidth: 80 }}>
-                                                            {item.tally_item_name || '+ Add name'} ✏️
+                                                        <span onClick={canEdit ? () => { setEditingTallyId(item.id); setTallyValue(item.tally_item_name || ''); } : undefined}
+                                                            style={{ background: item.tally_item_name ? '#f0faf4' : '#f9fafb', color: item.tally_item_name ? '#006d2f' : '#9ca3af', padding: '4px 10px', borderRadius: 6, fontSize: 12, cursor: canEdit ? 'pointer' : 'default', display: 'inline-block', minWidth: 80 }}>
+                                                            {item.tally_item_name || (canEdit ? '+ Add name' : '—')} {canEdit && '✏️'}
                                                         </span>
                                                     )}
                                                 </td>
                                                 <td style={styles.td}>₹{fmt(item.price)}</td>
                                                 <td style={styles.td}>
-                                                    {editingId === item.id ? (
+                                                    {canEdit && editingId === item.id ? (
                                                         <div style={{ display: 'flex', gap: 4 }}>
                                                             <input type="number" value={editValue} onChange={e => setEditValue(e.target.value)}
                                                                 style={{ width: 60, border: '2px solid #006d2f', borderRadius: 6, padding: '4px 8px', fontSize: 13 }}
@@ -337,9 +341,9 @@ const Inventory = () => {
                                                             <button onClick={() => setEditingId(null)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer' }}>✕</button>
                                                         </div>
                                                     ) : (
-                                                        <span onClick={() => { setEditingId(item.id); setEditValue(item.stock_quantity); }}
-                                                            style={{ background: '#f0faf4', color: '#006d2f', padding: '4px 10px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', display: 'inline-block' }}>
-                                                            {item.stock_quantity} ✏️
+                                                        <span onClick={canEdit ? () => { setEditingId(item.id); setEditValue(item.stock_quantity); } : undefined}
+                                                            style={{ background: '#f0faf4', color: '#006d2f', padding: '4px 10px', borderRadius: 6, fontWeight: 600, cursor: canEdit ? 'pointer' : 'default', display: 'inline-block' }}>
+                                                            {item.stock_quantity} {canEdit && '✏️'}
                                                         </span>
                                                     )}
                                                 </td>
