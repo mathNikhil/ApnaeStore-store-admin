@@ -43,8 +43,14 @@ const Sidebar = ({ onToggle }) => {
         if (!window.confirm('Are you sure you want to logout?')) return;
         const storeId = localStorage.getItem('currentStoreId');
         const subdomain = localStorage.getItem('currentStoreSubdomain');
+        const token = localStorage.getItem('storeAdminToken');
+        const staffId = localStorage.getItem('storeAdminStaffId');
         try {
-            if (storeId) await storeAdminAuthAPI.logout(storeId);
+            if (role === 'staff' && staffId && token) {
+                await storeAdminAuthAPI.staffLogout(staffId, token);
+            } else if (storeId) {
+                await storeAdminAuthAPI.logout(storeId);
+            }
         } catch (e) {
             console.error('Logout request failed:', e);
         }
@@ -53,23 +59,50 @@ const Sidebar = ({ onToggle }) => {
         localStorage.removeItem('currentStoreId');
         localStorage.removeItem('currentStoreName');
         localStorage.removeItem('currentStoreSubdomain');
+        localStorage.removeItem('storeAdminRole');
+        localStorage.removeItem('storeAdminStaffId');
+        localStorage.removeItem('storeAdminStaffName');
+        localStorage.removeItem('storeAdminPermissions');
         navigate(subdomain ? `/login?store=${subdomain}` : '/login');
     };
 
     const isActive = (path) => location.pathname === path;
 
-    const navItems = [
-        { path: '/dashboard', icon: '⊞', label: 'Dashboard' },
-        { path: '/orders', icon: '📋', label: 'Orders', badge: pendingCount > 0 ? pendingCount : null },
-        { path: '/customers', icon: '👤', label: 'Customers' },
-        { path: '/inventory', icon: '📦', label: 'Inventory' },
-        { path: '/couriers', icon: '🚚', label: 'Couriers' },
-        { path: '/reports', icon: '📈', label: 'Reports' },
-        { path: '/staff', icon: '👥', label: 'Staff' },
-        { path: '/returns', icon: '↩️', label: 'Returns' },
-        { path: '/coupons', icon: '🏷️', label: 'Coupons & Promos' },
-        { path: '/appointments', icon: '📅', label: 'Appointments' },
+    const role = localStorage.getItem('storeAdminRole') || 'owner';
+    const staffName = localStorage.getItem('storeAdminStaffName') || '';
+    // permissions: [{page, access}] or null (owner = null)
+    const rawPermissions = localStorage.getItem('storeAdminPermissions');
+    let permMap = null;  // { pageKey: 'view'|'edit' }
+    if (role === 'staff' && rawPermissions) {
+        try {
+            const arr = JSON.parse(rawPermissions);
+            permMap = {};
+            arr.forEach(p => { permMap[p.page] = p.access; });
+        } catch { permMap = {}; }
+    }
+
+    const allNavItems = [
+        { path: '/dashboard',    key: 'dashboard',    icon: '⊞',  label: 'Dashboard' },
+        { path: '/orders',       key: 'orders',       icon: '📋', label: 'Orders', badge: pendingCount > 0 ? pendingCount : null },
+        { path: '/customers',    key: 'customers',    icon: '👤', label: 'Customers' },
+        { path: '/inventory',    key: 'inventory',    icon: '📦', label: 'Inventory' },
+        { path: '/couriers',     key: 'couriers',     icon: '🚚', label: 'Couriers' },
+        { path: '/reports',      key: 'reports',      icon: '📈', label: 'Reports' },
+        { path: '/staff',        key: 'staff',        icon: '👥', label: 'Staff' },
+        { path: '/returns',      key: 'returns',      icon: '↩️', label: 'Returns' },
+        { path: '/coupons',      key: 'coupons',      icon: '🏷️', label: 'Coupons & Promos' },
+        { path: '/appointments', key: 'appointments', icon: '📅', label: 'Appointments' },
     ];
+    // Staff see only their allowed pages; owners see everything
+    const navItems = permMap
+        ? allNavItems
+            .filter(item => permMap[item.key])
+            .map(item => ({
+                ...item,
+                // Show a lock icon for view-only pages so staff knows they can't edit
+                label: item.label + (permMap[item.key] === 'view' ? ' 👁' : ''),
+            }))
+        : allNavItems;
 
     React.useEffect(() => {
         if (!isMobile) return;
@@ -117,6 +150,11 @@ const Sidebar = ({ onToggle }) => {
                 <div style={styles.storeBanner}>
                     <div style={styles.storeLabel}>MANAGING</div>
                     <div style={styles.storeName} title={storeName}>{storeName}</div>
+                    {role === 'staff' && staffName && (
+                        <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '4px' }}>
+                            👤 {staffName} · Staff
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -131,6 +131,12 @@ export const storeAdminAPI = {
 export const storeAdminAuthAPI = {
     login: (subdomain, password) =>
         apiRequest('/api/store-admin/login', 'POST', { subdomain, password }),
+    staffGoogleLogin: (subdomain, credential) =>
+        apiRequest('/api/store-admin/staff-google-login', 'POST', { subdomain, credential }),
+    staffLogin: (subdomain, phone, pin) =>
+        apiRequest('/api/store-admin/staff-login', 'POST', { subdomain, phone, pin }),
     logout: (storeId) =>
         apiRequest('/api/store-admin/logout', 'POST', { storeId }),
+    staffLogout: (staffId, token) =>
+        apiRequest('/api/store-admin/staff-logout', 'POST', { staffId, token }),
 };

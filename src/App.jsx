@@ -67,6 +67,20 @@ const App = () => {
 
     const isAuthenticated = !!localStorage.getItem('storeAdminToken') && !!localStorage.getItem('currentStoreId');
 
+// Staff permission guard — returns first allowed page for redirect, or null if access is allowed
+const getStaffRedirect = (pageKey) => {
+    const role = localStorage.getItem('storeAdminRole');
+    if (role !== 'staff') return null;  // owners pass through
+    const raw = localStorage.getItem('storeAdminPermissions');
+    if (!raw) return '/dashboard';
+    try {
+        // permissions: [{page, access}]
+        const perms = JSON.parse(raw);
+        if (perms.some(p => p.page === pageKey)) return null;  // allowed
+        return '/' + (perms[0]?.page || 'dashboard');          // redirect to first allowed
+    } catch { return '/dashboard'; }
+};
+
     // ── New order sound alert — polls every 30s when logged in ──────────
     useEffect(() => {
         const storeId = localStorage.getItem('currentStoreId');
@@ -138,20 +152,20 @@ const App = () => {
         <BrowserRouter>
             <Routes>
                 <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/orders" element={isAuthenticated ? <Orders /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/orders/:id" element={isAuthenticated ? <OrderDetail /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/orders/:id/bill" element={isAuthenticated ? <OrderBill /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/dashboard" element={isAuthenticated ? (getStaffRedirect('dashboard') ? <Navigate to={getStaffRedirect('dashboard')} /> : <Dashboard />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/orders" element={isAuthenticated ? (getStaffRedirect('orders') ? <Navigate to={getStaffRedirect('orders')} /> : <Orders />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/orders/:id" element={isAuthenticated ? (getStaffRedirect('orders') ? <Navigate to={getStaffRedirect('orders')} /> : <OrderDetail />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/orders/:id/bill" element={isAuthenticated ? (getStaffRedirect('orders') ? <Navigate to={getStaffRedirect('orders')} /> : <OrderBill />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders/:id/thermal" element={<ThermalBill />} />
-                <Route path="/customers" element={isAuthenticated ? <Customers /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/staff" element={isAuthenticated ? <Staff /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/couriers" element={isAuthenticated ? <Couriers /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/returns" element={isAuthenticated ? <Returns /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/returns/:id" element={isAuthenticated ? <ReturnDetail /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/inventory" element={isAuthenticated ? <Inventory /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/coupons" element={isAuthenticated ? <Coupons /> : <Navigate to={`/login${window.location.search}`} />} />
-                <Route path="/appointments" element={isAuthenticated ? <Appointments /> : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/customers" element={isAuthenticated ? (getStaffRedirect('customers') ? <Navigate to={getStaffRedirect('customers')} /> : <Customers />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/reports" element={isAuthenticated ? (getStaffRedirect('reports') ? <Navigate to={getStaffRedirect('reports')} /> : <Reports />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/staff" element={isAuthenticated ? (getStaffRedirect('staff') ? <Navigate to={getStaffRedirect('staff')} /> : <Staff />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/couriers" element={isAuthenticated ? (getStaffRedirect('couriers') ? <Navigate to={getStaffRedirect('couriers')} /> : <Couriers />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/returns" element={isAuthenticated ? (getStaffRedirect('returns') ? <Navigate to={getStaffRedirect('returns')} /> : <Returns />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/returns/:id" element={isAuthenticated ? (getStaffRedirect('returns') ? <Navigate to={getStaffRedirect('returns')} /> : <ReturnDetail />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/inventory" element={isAuthenticated ? (getStaffRedirect('inventory') ? <Navigate to={getStaffRedirect('inventory')} /> : <Inventory />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/coupons" element={isAuthenticated ? (getStaffRedirect('coupons') ? <Navigate to={getStaffRedirect('coupons')} /> : <Coupons />) : <Navigate to={`/login${window.location.search}`} />} />
+                <Route path="/appointments" element={isAuthenticated ? (getStaffRedirect('appointments') ? <Navigate to={getStaffRedirect('appointments')} /> : <Appointments />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="*" element={<Navigate to="/dashboard" />} />
             </Routes>
         </BrowserRouter>
