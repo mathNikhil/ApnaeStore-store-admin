@@ -122,6 +122,16 @@ const OrderBill = () => {
         return item.variant || item.size || '—';
     };
 
+    // SEC-014: HTML-escape any user-supplied string before injecting into
+    // document.write. A customer putting <script> in an item name would
+    // otherwise execute in the store-admin's browser and steal their token.
+    const esc = (str) => String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+
     const printThermal = () => {
         const guestName = order.order_type === 'dine_in' && order.dine_in_customer_name
             ? order.dine_in_customer_name
@@ -135,7 +145,7 @@ const OrderBill = () => {
             const price = Number(item.price || item.unit_price || 0);
             const total = (qty * price).toFixed(2);
             return `<tr>
-                <td style="padding:1px 2px;font-size:11px;">${item.name || 'Item'}</td>
+                <td style="padding:1px 2px;font-size:11px;">${esc(item.name) || 'Item'}</td>
                 <td style="padding:1px 2px;font-size:11px;text-align:center;">${qty}</td>
                 <td style="padding:1px 2px;font-size:11px;text-align:right;">&#8377;${total}</td>
             </tr>`;
@@ -159,15 +169,15 @@ const OrderBill = () => {
                 th:nth-child(3) { text-align: right; }
             </style>
         </head><body>
-            <div class="center bold" style="font-size:15px;">${storeName}</div>
-            ${storeAddress ? `<div class="center" style="font-size:10px;">${storeAddress}</div>` : ''}
-            ${storePhone ? `<div class="center" style="font-size:10px;">Ph: ${storePhone}</div>` : ''}
-            ${storeGST ? `<div class="center" style="font-size:10px;">GSTIN: ${storeGST}</div>` : ''}
+            <div class="center bold" style="font-size:15px;">${esc(storeName)}</div>
+            ${storeAddress ? `<div class="center" style="font-size:10px;">${esc(storeAddress)}</div>` : ''}
+            ${storePhone ? `<div class="center" style="font-size:10px;">Ph: ${esc(storePhone)}</div>` : ''}
+            ${storeGST ? `<div class="center" style="font-size:10px;">GSTIN: ${esc(storeGST)}</div>` : ''}
             <div class="divider"></div>
-            <div class="row"><span>Bill No:</span><span>${invoiceNo}</span></div>
-            <div class="row"><span>Date:</span><span>${orderDate}</span></div>
+            <div class="row"><span>Bill No:</span><span>${esc(invoiceNo)}</span></div>
+            <div class="row"><span>Date:</span><span>${esc(orderDate)}</span></div>
             <div class="row"><span>Order Type:</span><span>${order.order_type === 'dine_in' ? dineInLabel : 'Delivery'}</span></div>
-            ${order.order_type === 'dine_in' ? `<div class="row"><span>Guest:</span><span>${guestName}</span></div>${guestPhone ? `<div class="row"><span>Phone:</span><span>${guestPhone}</span></div>` : ''}` : `<div class="row"><span>Customer:</span><span>${guestName}</span></div>${guestPhone ? `<div class="row"><span>Phone:</span><span>${guestPhone}</span></div>` : ''}`}
+            ${order.order_type === 'dine_in' ? `<div class="row"><span>Guest:</span><span>${esc(guestName)}</span></div>${guestPhone ? `<div class="row"><span>Phone:</span><span>${esc(guestPhone)}</span></div>` : ''}` : `<div class="row"><span>Customer:</span><span>${esc(guestName)}</span></div>${guestPhone ? `<div class="row"><span>Phone:</span><span>${esc(guestPhone)}</span></div>` : ''}`}
             <div class="divider"></div>
             <table>
                 <thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amt</th></tr></thead>
