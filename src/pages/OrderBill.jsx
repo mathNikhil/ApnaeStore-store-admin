@@ -66,8 +66,20 @@ const OrderBill = () => {
     const invoiceNo  = `INV-${(order.order_id || order.id || '').slice(-10).toUpperCase()}`;
     const totalAmt   = Number(order.total_amount || 0);
     const taxAmt     = Number(order.tax_amount || 0);
-    const taxableAmt = enableGST && gstRate > 0 ? (totalAmt / (1 + gstRate / 100)).toFixed(2) : totalAmt.toFixed(2);
-    const cgstAmt    = enableGST && taxAmt > 0 ? (taxAmt / 2).toFixed(2) : '0.00';
+
+    // Detect per-product HSN: if any item has hsnCode, per-product mode is active
+    const hasPerItemHSN = items.some(i => i.hsnCode && String(i.hsnCode).trim() !== '');
+
+    // Compute totals by summing per-item GST (each item may have its own gstRate)
+    const itemsSubtotal = items.reduce((sum, i) => sum + Number(i.price || i.unit_price || 0) * Number(i.quantity || i.qty || 1), 0);
+    const itemsTaxTotal = enableGST ? items.reduce((sum, i) => {
+        const rate = i.gstRate != null ? parseFloat(i.gstRate) : gstRate;
+        const lineTotal = Number(i.price || i.unit_price || 0) * Number(i.quantity || i.qty || 1);
+        const taxable = rate > 0 ? lineTotal / (1 + rate / 100) : lineTotal;
+        return sum + (rate > 0 ? lineTotal - taxable : 0);
+    }, 0) : 0;
+    const taxableAmt = (itemsSubtotal - itemsTaxTotal).toFixed(2);
+    const cgstAmt    = enableGST && itemsTaxTotal > 0 ? (itemsTaxTotal / 2).toFixed(2) : '0.00';
     const sgstAmt    = cgstAmt;
     const paymentLabel = order.payment_method === 'cod' ? 'Cash on Delivery'
         : order.payment_method === 'upi' ? 'UPI'
@@ -185,7 +197,7 @@ const OrderBill = () => {
             </table>
             <div class="divider"></div>
             ${Number(order.delivery_charge) > 0 ? `<div class="row"><span>Delivery</span><span>&#8377;${Number(order.delivery_charge).toFixed(2)}</span></div>` : ''}
-            ${enableGST && taxAmt > 0 ? `<div class="row"><span>CGST @ ${cgstRate}%</span><span>&#8377;${cgstAmt}</span></div><div class="row"><span>SGST @ ${sgstRate}%</span><span>&#8377;${sgstAmt}</span></div>` : ''}
+            ${enableGST && itemsTaxTotal > 0 ? `<div class="row"><span>CGST</span><span>&#8377;${cgstAmt}</span></div><div class="row"><span>SGST</span><span>&#8377;${sgstAmt}</span></div>` : ''}
             <div class="total-row"><span>TOTAL</span><span>&#8377;${totalAmt.toFixed(2)}</span></div>
             <div class="row" style="margin-top:2px;"><span>Payment:</span><span>${paymentLabel}</span></div>
             <div class="divider"></div>
@@ -358,11 +370,18 @@ const OrderBill = () => {
 
                 {/* TOTALS */}
                 <div style={{ marginTop:4 }}>
-                    {enableGST && taxAmt > 0 && (
+                    {enableGST && itemsTaxTotal > 0 && (
                         <>
                             <div className="totals-row"><span>Taxable Amount</span><span>₹{taxableAmt}</span></div>
-                            <div className="totals-row"><span>CGST @ {cgstRate}%</span><span>₹{cgstAmt}</span></div>
-                            <div className="totals-row"><span>SGST @ {sgstRate}%</span><span>₹{sgstAmt}</span></div>
+                            {/* When items have mixed rates, show combined CGST/SGST without a single % label */}
+                            <div className="totals-row">
+                                <span>CGST{!hasPerItemHSN && cgstRate > 0 ? ` @ ${cgstRate}%` : ''}</span>
+                                <span>₹{cgstAmt}</span>
+                            </div>
+                            <div className="totals-row">
+                                <span>SGST{!hasPerItemHSN && sgstRate > 0 ? ` @ ${sgstRate}%` : ''}</span>
+                                <span>₹{sgstAmt}</span>
+                            </div>
                         </>
                     )}
                     {Number(order.delivery_charge) > 0

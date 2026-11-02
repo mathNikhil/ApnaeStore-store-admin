@@ -53,7 +53,12 @@ const ThermalBill = () => {
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
 
     const subtotal = items.reduce((s, i) => s + (parseFloat(i.price || 0) * parseInt(i.quantity || 1)), 0);
-    const gstAmt = enableGST ? subtotal * (gstRate / 100) : 0;
+    // Per-item GST: each item uses its own gstRate if set, else falls back to store-level gstRate
+    const gstAmt = enableGST ? items.reduce((sum, i) => {
+        const rate = i.gstRate != null ? parseFloat(i.gstRate) : parseFloat(gstRate);
+        const lineTotal = parseFloat(i.price || 0) * parseInt(i.quantity || 1);
+        return sum + (rate > 0 ? lineTotal - lineTotal / (1 + rate / 100) : 0);
+    }, 0) : 0;
     const deliveryCharge = parseFloat(order.delivery_charge || 0);
     const discount = parseFloat(order.discount_amount || 0);
     const total = subtotal + gstAmt + deliveryCharge - discount;
@@ -112,7 +117,7 @@ const ThermalBill = () => {
                 <div style={{ fontSize: '11px', marginTop: 4 }}>{line}</div>
                 <div style={{ fontSize: '11px', marginTop: 2 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><span>Rs.{subtotal.toFixed(2)}</span></div>
-                    {enableGST && gstAmt > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST ({gstRate}%)</span><span>Rs.{gstAmt.toFixed(2)}</span></div>}
+                    {enableGST && gstAmt > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST</span><span>Rs.{gstAmt.toFixed(2)}</span></div>}
                     {deliveryCharge > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Delivery</span><span>Rs.{deliveryCharge.toFixed(2)}</span></div>}
                     {discount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount</span><span>-Rs.{discount.toFixed(2)}</span></div>}
                 </div>
