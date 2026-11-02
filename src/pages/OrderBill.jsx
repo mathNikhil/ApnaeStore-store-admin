@@ -318,10 +318,16 @@ const OrderBill = () => {
                     </thead>
                     <tbody>
                         {items.length > 0 ? items.map((item, idx) => {
+                            // Per-item GST rate: use item's own rate if set, else fall back to store-level rate
+                            const itemGstRate  = item.gstRate != null ? parseFloat(item.gstRate) : gstRate;
+                            const itemCgstRate = itemGstRate / 2;
+                            const itemSgstRate = itemGstRate / 2;
                             const itemTotal    = Number(item.price || item.unit_price || 0) * Number(item.quantity || item.qty || 1);
-                            const itemTaxable  = enableGST && gstRate > 0 ? (itemTotal / (1 + gstRate / 100)).toFixed(2) : itemTotal.toFixed(2);
-                            const itemCgst     = enableGST && gstRate > 0 ? ((itemTotal - parseFloat(itemTaxable)) / 2).toFixed(2) : '0.00';
+                            const itemTaxable  = enableGST && itemGstRate > 0 ? (itemTotal / (1 + itemGstRate / 100)).toFixed(2) : itemTotal.toFixed(2);
+                            const itemCgst     = enableGST && itemGstRate > 0 ? ((itemTotal - parseFloat(itemTaxable)) / 2).toFixed(2) : '0.00';
                             const itemSgst     = itemCgst;
+                            // Per-item HSN code: use item's own HSN if set, else fall back to store-level HSN
+                            const itemHsn      = item.hsnCode || hsnCode || '—';
                             const variantLabel = storeInfo ? getSizeLabelForItem(item) : (item.variant || item.size || '—');
                             return (
                                 <tr key={idx} style={{ borderBottom:'1px solid #f2f4f7' }}>
@@ -334,13 +340,13 @@ const OrderBill = () => {
                                             <span style={{ fontSize:8 }}>{item.name || item.product_name || 'Item'}</span>
                                         </div>
                                     </td>
-                                    <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{hsnCode || '—'}</td>
+                                    <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{itemHsn}</td>
                                     <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{variantLabel}</td>
                                     <td className="td" style={{ textAlign:'right', fontSize:8 }}>₹{itemTaxable}</td>
                                     <td className="td" style={{ textAlign:'center', fontSize:8 }}>{item.quantity || item.qty || 1}</td>
                                     <td className="td" style={{ textAlign:'right', fontSize:8 }}>₹{Number(item.price || item.unit_price || 0).toFixed(2)}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{cgstRate}%<br/>₹{itemCgst}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{sgstRate}%<br/>₹{itemSgst}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemCgstRate}%<br/>₹{itemCgst}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemSgstRate}%<br/>₹{itemSgst}</td>
                                     <td className="td" style={{ textAlign:'right', fontSize:8, fontWeight:700 }}>₹{itemTotal.toFixed(2)}</td>
                                 </tr>
                             );
