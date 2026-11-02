@@ -335,10 +335,12 @@ const Appointments = () => {
         try {
             const res = await storeAdminAPI.updateAppointmentStatus(storeId, bookingId, newStatus);
             if (res.success) {
-                await fetchAppointments(storeId, date);
+                // Optimistically update selectedBooking so the modal reflects new status immediately
                 if (selectedBooking?.id === bookingId) {
                     setSelectedBooking(b => ({ ...b, booking_status: newStatus }));
                 }
+                // Refetch to sync grid
+                await fetchAppointments(storeId, date);
             } else {
                 alert(`❌ Failed to update: ${res.error || 'Unknown error'}`);
             }

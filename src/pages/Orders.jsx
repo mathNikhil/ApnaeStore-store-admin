@@ -105,13 +105,17 @@ const Orders = () => {
 
     const storeAddresses = ['all', ...new Set(orders.map(o => o.branch_name || 'Main Store'))];
 
-    const handleStatusUpdate = async (orderId, newStatus) => {
-        if (!window.confirm(`Change order ${orderId} status to ${newStatus.replace(/_/g, ' ').toUpperCase()}?`)) return;
+    const handleStatusUpdate = async (orderId, newStatus, currentStatus) => {
+        if (newStatus === currentStatus) return; // no-op if same
+        if (!window.confirm(`Change order status to ${newStatus.replace(/_/g, ' ').toUpperCase()}?`)) return;
         try {
             const result = await storeAdminAPI.updateOrderStatus(storeId, orderId, newStatus);
             if (result.success) {
-                fetchOrders(storeId);
-                alert(`✅ Order ${orderId} updated to ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+                // Optimistically update local state so the badge changes immediately
+                const updateStatus = (list) =>
+                    list.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+                setOrders(prev => updateStatus(prev));
+                setFilteredOrders(prev => updateStatus(prev));
             } else {
                 alert(`❌ Failed to update order status: ${result.error || 'Unknown error'}`);
             }
@@ -140,7 +144,12 @@ const Orders = () => {
         { value: 'cancelled', label: 'Cancelled' },
     ];
 
+    // allStatuses drives the status-change <select>.
+    // 'pending' is NOT here — backend rejects it with 400.
+    // But we DO need it as a display-only option when an order IS pending
+    // (so the controlled <select value={order.status}> doesn't go blank).
     const allStatuses = [
+        { value: 'pending', label: '⏳ Pending', displayOnly: true },
         { value: 'confirmed', label: 'Confirmed' },
         { value: 'processing', label: 'Processing' },
         { value: 'accepted', label: 'Accept for Production' },
@@ -257,12 +266,11 @@ const Orders = () => {
                         {canEdit && (
                             <select
                                 style={cardStyles.statusSelect}
-                                onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                                defaultValue=""
+                                value={order.status}
+                                onChange={(e) => handleStatusUpdate(order.id, e.target.value, order.status)}
                             >
-                                <option value="" disabled>Update</option>
                                 {allStatuses.map(s => (
-                                    <option key={s.value} value={s.value}>→ {s.label}</option>
+                                    <option key={s.value} value={s.value} disabled={!!s.displayOnly}>{s.label}</option>
                                 ))}
                             </select>
                         )}
@@ -431,13 +439,12 @@ const Orders = () => {
                                                 {canEdit && (
                                                     <select
                                                         style={styles.statusSelect}
-                                                        onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                                                        defaultValue=""
+                                                        value={order.status}
+                                                        onChange={(e) => handleStatusUpdate(order.id, e.target.value, order.status)}
                                                     >
-                                                        <option value="" disabled>Update</option>
                                                         {allStatuses.map(status => (
-                                                            <option key={status.value} value={status.value}>
-                                                                → {status.label}
+                                                            <option key={status.value} value={status.value} disabled={!!status.displayOnly}>
+                                                                {status.label}
                                                             </option>
                                                         ))}
                                                     </select>
