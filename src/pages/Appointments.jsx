@@ -232,12 +232,19 @@ const STAFF_COLORS = [
 ];
 
 const STATUS_META = {
-    pending:    { label: 'Pending',    bg: '#fff3e0', color: '#e65100', icon: '⏳' },
+    // 'pending' is intentionally excluded — it's the initial state set at booking
+    // creation and cannot be manually assigned via the status update flow.
+    // Backend allowedStatuses: ['confirmed','in_session','completed','cancelled','no_show']
     confirmed:  { label: 'Confirmed',  bg: '#e3f2fd', color: '#1565c0', icon: '✅' },
     in_session: { label: 'In Session', bg: '#e8f5e9', color: '#2e7d32', icon: '🟢' },
     completed:  { label: 'Completed',  bg: '#ede7f6', color: '#4527a0', icon: '🏁' },
     cancelled:  { label: 'Cancelled',  bg: '#fce4ec', color: '#c62828', icon: '❌' },
     no_show:    { label: 'No Show',    bg: '#f5f5f5', color: '#616161', icon: '👻' },
+};
+// Separate display-only map for showing current status badge (includes pending)
+const STATUS_DISPLAY = {
+    pending:    { label: 'Pending',    bg: '#fff3e0', color: '#e65100', icon: '⏳' },
+    ...STATUS_META,
 };
 
 // Convert "HH:MM" → minutes from midnight
@@ -332,9 +339,12 @@ const Appointments = () => {
                 if (selectedBooking?.id === bookingId) {
                     setSelectedBooking(b => ({ ...b, booking_status: newStatus }));
                 }
+            } else {
+                alert(`❌ Failed to update: ${res.error || 'Unknown error'}`);
             }
         } catch (e) {
             console.error('Status update error:', e);
+            alert(`❌ Error: ${e.message || 'Failed to update appointment status'}`);
         } finally {
             setUpdating(false);
         }
@@ -466,7 +476,7 @@ const Appointments = () => {
     const renderBookingBlock = (booking, colColor, laneIdx, totalLanes) => {
         const top = ((toMins(booking.booking_time) - startMins) / 60) * SLOT_HEIGHT;
         const height = Math.max(((booking.duration_mins || 30) / 60) * SLOT_HEIGHT, 54);
-        const meta = STATUS_META[booking.booking_status] || STATUS_META.pending;
+        const meta = STATUS_DISPLAY[booking.booking_status] || STATUS_DISPLAY.pending;
         const color = STAFF_COLORS[colColor] || STAFF_COLORS[0];
 
         // Split column width when there are overlapping bookings
@@ -580,7 +590,7 @@ const Appointments = () => {
                 {/* Status filter chips */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
                     {['all', 'pending', 'confirmed', 'in_session', 'completed', 'cancelled', 'no_show'].map(s => {
-                        const meta = STATUS_META[s] || { label: 'All', bg: '#e0e0e0', color: '#333' };
+                        const meta = STATUS_DISPLAY[s] || { label: 'All', bg: '#e0e0e0', color: '#333' };
                         const active = statusFilter === s;
                         return (
                             <button
@@ -861,10 +871,10 @@ const Appointments = () => {
                                 <DetailRow label="Status" value={
                                     <span style={{
                                         padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700,
-                                        background: STATUS_META[selectedBooking.booking_status]?.bg || '#eee',
-                                        color: STATUS_META[selectedBooking.booking_status]?.color || '#333',
+                                        background: STATUS_DISPLAY[selectedBooking.booking_status]?.bg || '#eee',
+                                        color: STATUS_DISPLAY[selectedBooking.booking_status]?.color || '#333',
                                     }}>
-                                        {STATUS_META[selectedBooking.booking_status]?.icon} {STATUS_META[selectedBooking.booking_status]?.label || selectedBooking.booking_status}
+                                        {STATUS_DISPLAY[selectedBooking.booking_status]?.icon} {STATUS_DISPLAY[selectedBooking.booking_status]?.label || selectedBooking.booking_status}
                                     </span>
                                 } />
                             </div>

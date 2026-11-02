@@ -106,18 +106,18 @@ const Orders = () => {
     const storeAddresses = ['all', ...new Set(orders.map(o => o.branch_name || 'Main Store'))];
 
     const handleStatusUpdate = async (orderId, newStatus) => {
-        if (!window.confirm(`Change order ${orderId} status to ${newStatus.replace('_', ' ').toUpperCase()}?`)) return;
+        if (!window.confirm(`Change order ${orderId} status to ${newStatus.replace(/_/g, ' ').toUpperCase()}?`)) return;
         try {
             const result = await storeAdminAPI.updateOrderStatus(storeId, orderId, newStatus);
             if (result.success) {
                 fetchOrders(storeId);
-                alert(`✅ Order ${orderId} updated to ${newStatus.replace('_', ' ').toUpperCase()}`);
+                alert(`✅ Order ${orderId} updated to ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
             } else {
-                alert('❌ Failed to update order status');
+                alert(`❌ Failed to update order status: ${result.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error updating status:', error);
-            alert('❌ Error updating order status');
+            alert(`❌ Error: ${error.message || 'Failed to update order status'}`);
         }
     };
 
@@ -141,7 +141,6 @@ const Orders = () => {
     ];
 
     const allStatuses = [
-        { value: 'pending', label: '⏳ Pending' },
         { value: 'confirmed', label: 'Confirmed' },
         { value: 'processing', label: 'Processing' },
         { value: 'accepted', label: 'Accept for Production' },
