@@ -164,10 +164,27 @@ const Orders = () => {
     const clearSelection = () => setSelectedOrders(new Set());
 
     const openCombinedInvoice = () => {
-        if (selectedOrders.size < 2) return;
+        if (selectedOrders.size < 1) return;
         const ids = [...selectedOrders].join(',');
         const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
         navigate(`/orders/combined-invoice?ids=${ids}&subdomain=${subdomain}`);
+    };
+
+    // Single-order print helpers
+    const openA4Invoice = (order) => {
+        const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
+        const storeId   = localStorage.getItem('currentStoreId') || '';
+        const token     = localStorage.getItem('storeAdminToken') || '';
+        const orderId   = order.id;
+        window.open(`/orders/combined-invoice?ids=${orderId}&subdomain=${subdomain}&storeId=${storeId}&t=${token}`, '_blank');
+    };
+
+    const openThermalBill = (order) => {
+        const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
+        const storeId   = localStorage.getItem('currentStoreId') || '';
+        const token     = localStorage.getItem('storeAdminToken') || '';
+        const orderId   = order.id;
+        window.open(`/orders/${orderId}/thermal?subdomain=${subdomain}&storeId=${storeId}&t=${token}`, '_blank');
     };
 
     // ── Status update ─────────────────────────────────────────────────────────
@@ -330,6 +347,16 @@ const Orders = () => {
                         <button style={cardStyles.viewBtn} onClick={() => navigate(`/orders/${order.id}`)}>
                             View
                         </button>
+                        <button
+                            title="Tax Invoice (A4)"
+                            style={{ padding: '6px 10px', background: '#fff', color: '#006d2f', border: '1.5px solid #006d2f', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onClick={() => openA4Invoice(order)}
+                        >📄 A4</button>
+                        <button
+                            title="Thermal Bill (80mm)"
+                            style={{ padding: '6px 10px', background: '#fff3e0', color: '#e65100', border: '1.5px solid #ffcc80', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onClick={() => openThermalBill(order)}
+                        >🧾</button>
                         {canEdit && (
                             <select
                                 style={cardStyles.statusSelect}
@@ -361,17 +388,35 @@ const Orders = () => {
                         <p style={{ color: '#8e9eab', marginTop: '4px' }}>Manage and track all orders</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        {/* Combined invoice button — appears when 2+ orders selected */}
-                        {selectedOrders.size >= 2 && (
+                        {/* Invoice button — appears when 1+ orders selected */}
+                        {selectedOrders.size >= 1 && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#e8f5e9', border: '1.5px solid #a5d6a7', borderRadius: 10, padding: '6px 12px' }}>
                                 <span style={{ fontSize: 13, color: '#1b5e20', fontWeight: 600 }}>
-                                    {selectedOrders.size} orders selected
+                                    {selectedOrders.size} {selectedOrders.size === 1 ? 'order' : 'orders'} selected
                                 </span>
                                 <button
                                     style={{ padding: '7px 14px', background: '#006d2f', color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
                                     onClick={openCombinedInvoice}
                                 >
-                                    🖨️ Combined Invoice
+                                    📄 Tax Invoice (A4)
+                                </button>
+                                <button
+                                    style={{ padding: '7px 14px', background: '#fff', color: '#006d2f', border: '1.5px solid #006d2f', borderRadius: 7, fontWeight: 700, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
+                                    onClick={() => {
+                                        const ids = [...selectedOrders].join(',');
+                                        const subdomain = localStorage.getItem('currentStoreSubdomain') || '';
+                                        const storeId2 = localStorage.getItem('currentStoreId') || '';
+                                        const token2 = localStorage.getItem('storeAdminToken') || '';
+                                        // For single order thermal open thermal route; for multi open combined (A4 only)
+                                        if (selectedOrders.size === 1) {
+                                            const orderId = [...selectedOrders][0];
+                                            window.open(`/orders/${orderId}/thermal?subdomain=${subdomain}&storeId=${storeId2}&t=${token2}`, '_blank');
+                                        } else {
+                                            window.open(`/orders/combined-invoice?ids=${ids}&subdomain=${subdomain}&storeId=${storeId2}&t=${token2}`, '_blank');
+                                        }
+                                    }}
+                                >
+                                    🧾 Thermal Bill
                                 </button>
                                 <button
                                     style={{ padding: '6px 10px', background: 'transparent', color: '#556067', border: '1px solid #ccc', borderRadius: 7, cursor: 'pointer', fontSize: 12 }}
@@ -562,6 +607,16 @@ const Orders = () => {
                                             <td style={styles.td}>
                                                 <div style={styles.actionButtons}>
                                                     <button style={styles.viewBtn} onClick={() => navigate(`/orders/${order.id}`)}>View</button>
+                                                    <button
+                                                        title="Tax Invoice (A4)"
+                                                        style={{ padding: '5px 9px', background: '#fff', color: '#006d2f', border: '1.5px solid #006d2f', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                                        onClick={() => openA4Invoice(order)}
+                                                    >📄 A4</button>
+                                                    <button
+                                                        title="Thermal Bill (80mm)"
+                                                        style={{ padding: '5px 9px', background: '#fff3e0', color: '#e65100', border: '1.5px solid #ffcc80', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                                        onClick={() => openThermalBill(order)}
+                                                    >🧾 Thermal</button>
                                                     {canEdit && (
                                                         <select
                                                             style={styles.statusSelect}
