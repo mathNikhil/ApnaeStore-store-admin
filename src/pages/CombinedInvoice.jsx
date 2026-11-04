@@ -8,6 +8,7 @@ const CombinedInvoice = () => {
     const [orders, setOrders] = useState([]);
     const [storeInfo, setStoreInfo] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [printMode, setPrintMode] = useState('a4'); // 'a4' | 'thermal'
 
     useEffect(() => {
         const token = localStorage.getItem('storeAdminToken');
@@ -43,14 +44,12 @@ const CombinedInvoice = () => {
         fetchAll();
     }, []);
 
-    useEffect(() => {
-        if (!loading && orders.length > 0) setTimeout(() => window.print(), 800);
-    }, [loading, orders]);
+    // No auto-print — user picks A4 or Thermal before printing
 
     if (loading) return <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', fontSize:16, color:'#666' }}>Loading orders...</div>;
     if (orders.length === 0) return <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', fontSize:16, color:'#666' }}>No orders found.</div>;
 
-    // Store config
+    // Store config — declared here so both thermal and A4 views can use them
     const storeName    = storeInfo?.config?.brand?.storeName || storeInfo?.store_name || localStorage.getItem('currentStoreName') || 'Store';
     const storePhone   = storeInfo?.config?.profile?.officeNumber || '';
     const storeEmail   = storeInfo?.config?.profile?.supportEmail || '';
@@ -64,12 +63,12 @@ const CombinedInvoice = () => {
     const gstRate      = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
 
     // Combined invoice number and date
-    const invoiceNo  = `CINV-${Date.now().toString().slice(-8)}`;
+    const invoiceNo   = `CINV-${Date.now().toString().slice(-8)}`;
     const invoiceDate = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' });
 
     // Customer info — use the first order's customer as the primary
-    const primaryOrder = orders[0];
-    const customerName = primaryOrder.customer_name || primaryOrder.customer_phone || 'Customer';
+    const primaryOrder  = orders[0];
+    const customerName  = primaryOrder.customer_name || primaryOrder.customer_phone || 'Customer';
     const customerPhone = primaryOrder.customer_phone || '';
     const customerEmail = primaryOrder.customer_email || '';
 
@@ -80,6 +79,85 @@ const CombinedInvoice = () => {
             _orderId: (o.order_id || o.id || '').slice(-8).toUpperCase(),
         }))
     );
+
+    // ── Thermal view ─────────────────────────────────────────────────────────
+    if (printMode === 'thermal') {
+        const thermalGstRate  = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
+        const thermalEnableGST = storeInfo?.config?.cart?.enableGST || false;
+        const thermalSubtotal = allItems.reduce((s, i) => s + parseFloat(i.price || 0) * parseInt(i.quantity || 1), 0);
+        const thermalGstAmt = thermalEnableGST ? allItems.reduce((sum, i) => {
+            const rate = i.gstRate != null ? parseFloat(i.gstRate) : thermalGstRate;
+            const lineTotal = parseFloat(i.price || 0) * parseInt(i.quantity || 1);
+            return sum + (rate > 0 ? lineTotal - lineTotal / (1 + rate / 100) : 0);
+        }, 0) : 0;
+        const thermalDelivery = orders.reduce((s, o) => s + parseFloat(o.delivery_charge || 0), 0);
+        const thermalDiscount = orders.reduce((s, o) => s + parseFloat(o.discount_amount || 0), 0);
+        const thermalTotal    = thermalSubtotal + thermalGstAmt + thermalDelivery - thermalDiscount;
+        const line = '--------------------------------';
+        return (
+            <>
+                <style>{`@page { margin: 0; size: 80mm auto; } body { margin: 0; } @media print { body { width: 80mm; } .no-print { display: none; } }`}</style>
+                <div className="no-print" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 20px', background:'#fff', borderBottom:'1px solid #e0e3e6', position:'sticky', top:0, zIndex:100 }}>
+                    <button onClick={() => navigate(-1)} style={{ padding:'7px 16px', background:'#f0f2f5', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13 }}>← Back</button>
+                    <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={() => setPrintMode('a4')} style={{ padding:'7px 16px', background:'#f0f2f5', border:'1px solid #ccc', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13 }}>📄 A4 Invoice</button>
+                        <button onClick={() => window.print()} style={{ padding:'7px 22px', background:'#191c1e', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🖨️ Print Thermal</button>
+                    </div>
+                </div>
+                <div style={{ width:'80mm', fontFamily:'monospace', fontSize:'12px', padding:'4mm', boxSizing:'border-box', background:'#fff', margin:'0 auto' }}>
+                    <div style={{ textAlign:'center', fontWeight:'bold', fontSize:'16px', marginBottom:2 }}>{storeName}</div>
+                    {storePhone && <div style={{ textAlign:'center', fontSize:'11px' }}>Tel: {storePhone}</div>}
+                    {storeAddress && <div style={{ textAlign:'center', fontSize:'11px', marginBottom:2 }}>{storeAddress}</div>}
+                    {storeGST && <div style={{ textAlign:'center', fontSize:'11px' }}>GSTIN: {storeGST}</div>}
+                    <div style={{ textAlign:'center', fontSize:'11px', marginTop:4 }}>{line}</div>
+                    <div style={{ fontSize:'11px', fontWeight:'bold', textAlign:'center', marginTop:4 }}>COMBINED BILL — {orders.length} ORDERS</div>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', marginTop:4 }}>
+                        <span>Date: {new Date().toLocaleDateString('en-IN')}</span>
+                        <span>{new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}</span>
+                    </div>
+                    <div style={{ fontSize:'11px' }}>Customer: {customerName}</div>
+                    {customerPhone && <div style={{ fontSize:'11px' }}>Mobile: {customerPhone}</div>}
+                    <div style={{ fontSize:'11px', marginTop:2 }}>
+                        Orders: {orders.map(o => '#' + (o.order_id || o.id || '').slice(-8)).join(', ')}
+                    </div>
+                    <div style={{ textAlign:'center', fontSize:'11px', marginTop:4 }}>{line}</div>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontWeight:'bold', fontSize:'11px', marginTop:4 }}>
+                        <span style={{ flex:1 }}>Item</span>
+                        <span style={{ width:30, textAlign:'center' }}>Qty</span>
+                        <span style={{ width:60, textAlign:'right' }}>Amt</span>
+                    </div>
+                    <div style={{ fontSize:'11px' }}>{line}</div>
+                    {allItems.map((item, i) => (
+                        <div key={i} style={{ marginTop:3 }}>
+                            <div style={{ fontSize:'11px' }}>
+                                {item.name || item.product_name || 'Product'}
+                                <span style={{ fontSize:'10px', color:'#666' }}> [#{item._orderId}]</span>
+                            </div>
+                            <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px' }}>
+                                <span style={{ flex:1 }}>@ Rs.{parseFloat(item.price || 0).toFixed(2)}</span>
+                                <span style={{ width:30, textAlign:'center' }}>{item.quantity || 1}</span>
+                                <span style={{ width:60, textAlign:'right' }}>Rs.{(parseFloat(item.price || 0) * parseInt(item.quantity || 1)).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    ))}
+                    <div style={{ fontSize:'11px', marginTop:4 }}>{line}</div>
+                    <div style={{ fontSize:'11px', marginTop:2 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between' }}><span>Subtotal</span><span>Rs.{thermalSubtotal.toFixed(2)}</span></div>
+                        {thermalEnableGST && thermalGstAmt > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>GST</span><span>Rs.{thermalGstAmt.toFixed(2)}</span></div>}
+                        {thermalDelivery > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>Delivery</span><span>Rs.{thermalDelivery.toFixed(2)}</span></div>}
+                        {thermalDiscount > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>Discount</span><span>-Rs.{thermalDiscount.toFixed(2)}</span></div>}
+                    </div>
+                    <div style={{ fontSize:'11px' }}>{line}</div>
+                    <div style={{ display:'flex', justifyContent:'space-between', fontWeight:'bold', fontSize:'14px', marginTop:2 }}>
+                        <span>TOTAL</span><span>Rs.{thermalTotal.toFixed(2)}</span>
+                    </div>
+                    <div style={{ fontSize:'11px' }}>{line}</div>
+                    <div style={{ textAlign:'center', fontSize:'11px', marginTop:4 }}>Thank you!</div>
+                    <div style={{ textAlign:'center', fontSize:'10px', marginTop:2, marginBottom:8 }}>Powered by AapnaEstore</div>
+                </div>
+            </>
+        );
+    }
 
     // Totals
     const hasPerItemHSN = allItems.some(i => i.hsnCode && String(i.hsnCode).trim() !== '');
@@ -142,7 +220,10 @@ const CombinedInvoice = () => {
                 <div style={{ fontSize:13, color:'#556067', fontWeight:600 }}>
                     Combined Invoice — {orders.length} orders merged
                 </div>
-                <button onClick={() => window.print()} style={{ padding:'7px 22px', background:'#191c1e', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🖨️ Print Invoice</button>
+                <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={() => setPrintMode('thermal')} style={{ padding:'7px 16px', background:'#f0f2f5', border:'1px solid #ccc', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13 }}>🧾 Thermal Print</button>
+                    <button onClick={() => window.print()} style={{ padding:'7px 22px', background:'#191c1e', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}>🖨️ Print A4 Invoice</button>
+                </div>
             </div>
 
             <div className="page">
