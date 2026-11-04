@@ -92,14 +92,13 @@ const CombinedInvoice = () => {
         console.log('[DEBUG] order keys:', Object.keys(orders[0]));
         console.log('[DEBUG] full order:', JSON.stringify(orders[0], null, 2));
     }
-    const getStaffFromOrder = (o) =>
-        o.staff_name || o.assigned_staff_name || o.staffName || o.assignedStaffName ||
-        o.assigned_to || o.handler || o.served_by || o.therapist || o.consultant ||
-        (o.staff && typeof o.staff === 'string' ? o.staff : '') ||
-        (o.staff && typeof o.staff === 'object' ? (o.staff.name || o.staff.full_name || o.staff.staff_name || '') : '') ||
-        (o.assignedStaff && typeof o.assignedStaff === 'string' ? o.assignedStaff : '') ||
-        (o.assignedStaff && typeof o.assignedStaff === 'object' ? (o.assignedStaff.name || '') : '') || '';
-    const staffNames = [...new Set(orders.map(getStaffFromOrder).filter(Boolean))];
+    // Staff names come from item.selectedSlots[].staffName
+    const staffNames = [...new Set(
+        orders.flatMap(o => (o.items || []))
+              .flatMap(item => (item.selectedSlots || []))
+              .map(slot => slot.staffName)
+              .filter(Boolean)
+    )];
     const staffLabel = staffNames.join(', ');
 
     // Flatten all items from all orders, tagged with order ID

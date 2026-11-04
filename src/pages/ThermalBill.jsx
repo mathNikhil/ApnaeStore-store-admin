@@ -65,10 +65,12 @@ const ThermalBill = () => {
     const storeFSSAI  = storeInfo?.config?.cart?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
     console.log('[DEBUG ThermalBill] full order:', JSON.stringify(order, null, 2));
-    const staffName = order?.staff_name || order?.assigned_staff_name || order?.staffName || order?.assignedStaffName ||
-        order?.assigned_to || order?.handler || order?.served_by || order?.therapist || order?.consultant ||
-        (order?.staff && typeof order.staff === 'string' ? order.staff : '') ||
-        (order?.staff && typeof order.staff === 'object' ? (order.staff.name || order.staff.full_name || '') : '') || '';
+    // Staff names from item.selectedSlots[].staffName
+    const staffName = [...new Set(
+        items.flatMap(item => (item.selectedSlots || []))
+             .map(slot => slot.staffName)
+             .filter(Boolean)
+    )].join(', ');
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
 
