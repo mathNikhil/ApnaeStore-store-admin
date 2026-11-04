@@ -27,8 +27,23 @@ const OrderBill = () => {
                 const hostname = window.location.hostname;
                 const hostnameSubdomain = hostname.includes('.aapnaestore.com') ? hostname.split('.')[0] : null;
                 const subdomain = urlParams.get('subdomain') || urlParams.get('store') || hostnameSubdomain;
-                if (subdomain) {
-                    const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
+                const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
+                const token = urlParams.get('t') || localStorage.getItem('storeAdminToken');
+                const adminStoreId = urlParams.get('storeId') || storeId;
+                // Prefer authenticated admin API — has full config including profile, cart, brand
+                if (adminStoreId && token) {
+                    const res = await fetch(`${API}/api/stores/${adminStoreId}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const storeResult = await res.json();
+                    if (storeResult?.success && storeResult.data) {
+                        setStoreInfo(storeResult.data);
+                    } else if (subdomain) {
+                        const pubRes = await fetch(`${API}/api/public/store/${subdomain}`);
+                        const pubData = await pubRes.json();
+                        if (pubData?.success) setStoreInfo(pubData.data);
+                    }
+                } else if (subdomain) {
                     const res = await fetch(`${API}/api/public/store/${subdomain}`);
                     const storeResult = await res.json();
                     if (storeResult?.success) setStoreInfo(storeResult.data);

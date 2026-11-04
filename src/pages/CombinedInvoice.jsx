@@ -27,13 +27,28 @@ const CombinedInvoice = () => {
                 const fetched = results.filter(r => r.success).map(r => r.data);
                 setOrders(fetched);
 
-                // Fetch store info
+                // Fetch full store config via authenticated admin API (has profile, cart, brand)
                 const urlParams = new URLSearchParams(location.search);
                 const hostname = window.location.hostname;
                 const hostnameSubdomain = hostname.includes('.aapnaestore.com') ? hostname.split('.')[0] : null;
                 const subdomain = urlParams.get('subdomain') || urlParams.get('store') || hostnameSubdomain;
-                if (subdomain) {
-                    const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
+                const API = import.meta.env.VITE_API_URL || 'https://api.aapnaestore.com';
+                const adminToken = urlParams.get('t') || localStorage.getItem('storeAdminToken');
+                const adminStoreId = urlParams.get('storeId') || storeId;
+                if (adminStoreId && adminToken) {
+                    const res = await fetch(`${API}/api/stores/${adminStoreId}`, {
+                        headers: { Authorization: `Bearer ${adminToken}` }
+                    });
+                    const storeResult = await res.json();
+                    if (storeResult?.success && storeResult.data) {
+                        setStoreInfo(storeResult.data);
+                    } else if (subdomain) {
+                        // Fallback to public API
+                        const pubRes = await fetch(`${API}/api/public/store/${subdomain}`);
+                        const pubData = await pubRes.json();
+                        if (pubData?.success) setStoreInfo(pubData.data);
+                    }
+                } else if (subdomain) {
                     const res = await fetch(`${API}/api/public/store/${subdomain}`);
                     const storeResult = await res.json();
                     if (storeResult?.success) setStoreInfo(storeResult.data);
@@ -247,7 +262,6 @@ const CombinedInvoice = () => {
                         <div style={{ fontSize:7.5, color:'#006d2f', marginTop:2, fontWeight:600 }}>
                             {orders.length} Orders Merged
                         </div>
-                        {!storeGST && <div style={{ fontSize:7, color:'#e74c3c', marginTop:3 }}>⚠️ GSTIN not set</div>}
                     </div>
                 </div>
 

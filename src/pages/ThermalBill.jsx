@@ -24,7 +24,21 @@ const ThermalBill = () => {
                 const orderData = await orderRes.json();
                 if (orderData.success) setOrder(orderData.data);
 
-                if (subdomain) {
+                // Fetch full store config via authenticated admin API (has profile, cart, brand)
+                if (storeId && token) {
+                    const storeRes = await fetch(`${API}/api/stores/${storeId}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const storeData = await storeRes.json();
+                    if (storeData?.success && storeData.data) {
+                        setStoreInfo(storeData.data);
+                    } else if (subdomain) {
+                        // Fallback to public API
+                        const pubRes = await fetch(`${API}/api/public/store/${subdomain}`);
+                        const pubData = await pubRes.json();
+                        if (pubData?.success) setStoreInfo(pubData.data);
+                    }
+                } else if (subdomain) {
                     const storeRes = await fetch(`${API}/api/public/store/${subdomain}`);
                     const storeData = await storeRes.json();
                     if (storeData?.success) setStoreInfo(storeData.data);
