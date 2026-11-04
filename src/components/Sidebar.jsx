@@ -6,8 +6,31 @@ if (!document.getElementById('store-admin-responsive')) {
     const style = document.createElement('style');
     style.id = 'store-admin-responsive';
     style.textContent = `
-        @media (max-width: 768px) {
-            .main-content { margin-left: 0 !important; padding: 60px 16px 16px !important; }
+        @media (max-width: 900px) {
+            .main-content {
+                margin-left: 0 !important;
+                padding: 64px 12px 16px !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+        }
+        @media (max-width: 600px) {
+            .orders-card-grid {
+                grid-template-columns: 1fr !important;
+            }
+            .orders-header-actions {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                width: 100%;
+            }
+            .orders-search-bar {
+                flex-direction: column !important;
+            }
+            .orders-search-bar input,
+            .orders-search-bar select {
+                width: 100% !important;
+            }
         }
     `;
     document.head.appendChild(style);

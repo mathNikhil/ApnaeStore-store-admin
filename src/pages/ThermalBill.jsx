@@ -64,6 +64,7 @@ const ThermalBill = () => {
     const storeGST    = storeInfo?.config?.cart?.gstNumber || '';
     const storeFSSAI  = storeInfo?.config?.cart?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
+    const staffName   = order?.staff_name || order?.assigned_staff_name || order?.staff?.name || '';
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
 
@@ -98,6 +99,7 @@ const ThermalBill = () => {
                     <span>{new Date(order.created_at).toLocaleDateString('en-IN')}</span>
                 </div>
                 <div style={{ fontSize: '11px' }}>Time: {new Date(order.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                {staffName && <div style={{ textAlign: 'center', fontSize: '11px', marginTop: 2 }}>Staff: {staffName}</div>}
                 {order.order_type === 'dine_in' ? (
                     <>
                         <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: 2 }}>🍽️ {dineInLabel}</div>

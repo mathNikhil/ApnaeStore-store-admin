@@ -87,6 +87,9 @@ const CombinedInvoice = () => {
     const customerName  = primaryOrder.customer_name || primaryOrder.customer_phone || 'Customer';
     const customerPhone = primaryOrder.customer_phone || '';
     const customerEmail = primaryOrder.customer_email || '';
+    // Collect unique staff names across all orders
+    const staffNames = [...new Set(orders.map(o => o.staff_name || o.assigned_staff_name || (o.staff && o.staff.name) || '').filter(Boolean))];
+    const staffLabel = staffNames.join(', ');
 
     // Flatten all items from all orders, tagged with order ID
     const allItems = orders.flatMap(o =>
@@ -134,6 +137,7 @@ const CombinedInvoice = () => {
                     </div>
                     <div style={{ fontSize:'11px' }}>Customer: {customerName}</div>
                     {customerPhone && <div style={{ fontSize:'11px' }}>Mobile: {customerPhone}</div>}
+                    {staffLabel && <div style={{ fontSize:'11px' }}>Staff: {staffLabel}</div>}
                     <div style={{ fontSize:'11px', marginTop:2 }}>
                         Orders: {orders.map(o => '#' + (o.order_id || o.id || '').slice(-8)).join(', ')}
                     </div>
@@ -309,6 +313,7 @@ const CombinedInvoice = () => {
                         <div className="val">{customerName}</div>
                         {customerPhone && <div className="sub">📞 {customerPhone}</div>}
                         {customerEmail && <div className="sub">✉ {customerEmail}</div>}
+                        {staffLabel && <div className="sub" style={{ marginTop:3 }}>👤 Staff: {staffLabel}</div>}
                     </div>
                     <div>
                         <div className="lbl">Order References</div>

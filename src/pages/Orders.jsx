@@ -336,30 +336,32 @@ const Orders = () => {
 
                 {/* Footer: amount + date + actions */}
                 <div style={cardStyles.cardFooter}>
-                    <div>
-                        <span style={cardStyles.amount}>₹{Number(order.total_amount).toLocaleString()}</span>
-                        {order.coupon_code && (
-                            <span style={cardStyles.coupon}>🏷️ {order.coupon_code} −₹{Number(order.discount_amount || 0).toLocaleString()}</span>
-                        )}
-                        <div style={cardStyles.date}>{new Date(order.created_at).toLocaleString()}</div>
-                    </div>
-                    <div style={cardStyles.cardActions}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <div>
+                            <span style={cardStyles.amount}>₹{Number(order.total_amount).toLocaleString()}</span>
+                            {order.coupon_code && (
+                                <span style={cardStyles.coupon}>🏷️ {order.coupon_code} −₹{Number(order.discount_amount || 0).toLocaleString()}</span>
+                            )}
+                            <div style={cardStyles.date}>{new Date(order.created_at).toLocaleString()}</div>
+                        </div>
                         <button style={cardStyles.viewBtn} onClick={() => navigate(`/orders/${order.id}`)}>
                             View
                         </button>
+                    </div>
+                    <div style={cardStyles.cardActions}>
                         <button
                             title="Tax Invoice (A4)"
-                            style={{ padding: '6px 10px', background: '#fff', color: '#006d2f', border: '1.5px solid #006d2f', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            style={{ flex: 1, padding: '7px 10px', background: '#fff', color: '#006d2f', border: '1.5px solid #006d2f', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textAlign: 'center' }}
                             onClick={() => openA4Invoice(order)}
-                        >📄 A4</button>
+                        >📄 A4 Invoice</button>
                         <button
                             title="Thermal Bill (80mm)"
-                            style={{ padding: '6px 10px', background: '#fff3e0', color: '#e65100', border: '1.5px solid #ffcc80', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            style={{ flex: 1, padding: '7px 10px', background: '#fff3e0', color: '#e65100', border: '1.5px solid #ffcc80', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textAlign: 'center' }}
                             onClick={() => openThermalBill(order)}
-                        >🧾</button>
+                        >🧾 Thermal</button>
                         {canEdit && (
                             <select
-                                style={cardStyles.statusSelect}
+                                style={{ ...cardStyles.statusSelect, flex: 1 }}
                                 value={order.status}
                                 onChange={(e) => handleStatusUpdate(order.id, e.target.value, order.status)}
                             >
@@ -387,7 +389,7 @@ const Orders = () => {
                         <h1>📋 Orders</h1>
                         <p style={{ color: '#8e9eab', marginTop: '4px' }}>Manage and track all orders</p>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="orders-header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                         {/* Invoice button — appears when 1+ orders selected */}
                         {selectedOrders.size >= 1 && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#e8f5e9', border: '1.5px solid #a5d6a7', borderRadius: 10, padding: '6px 12px' }}>
@@ -479,7 +481,7 @@ const Orders = () => {
                 </div>
 
                 {/* Search / filter bar */}
-                <div style={styles.searchBar}>
+                <div className="orders-search-bar" style={styles.searchBar}>
                     <input
                         type="text"
                         placeholder="Search by order ID, customer, email..."
@@ -664,7 +666,7 @@ const Orders = () => {
                                 </span>
                             )}
                         </div>
-                        <div style={cardStyles.grid}>
+                        <div className="orders-card-grid" style={cardStyles.grid}>
                             {filteredOrders.length === 0 ? (
                                 <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px', color: '#8e9eab' }}>
                                     No orders found
@@ -684,7 +686,7 @@ const Orders = () => {
 // ── Table styles ──────────────────────────────────────────────────────────────
 const styles = {
     container: { display: 'flex', minHeight: '100vh', background: '#f0f2f5' },
-    main: { flex: 1, padding: '24px', marginLeft: '240px' },
+    main: { flex: 1, padding: '24px', marginLeft: '240px', minWidth: 0 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' },
     exportBtn: { padding: '10px 18px', background: '#006d2f', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap' },
     searchBar: { display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
@@ -724,13 +726,13 @@ const cardStyles = {
     itemRow: { display: 'flex', flexDirection: 'column', gap: '1px' },
     itemName: { fontSize: '13px', fontWeight: '600', color: '#2d3436' },
     itemMeta: { fontSize: '12px', color: '#8e9eab' },
-    cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px', borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginTop: '2px' },
+    cardFooter: { display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginTop: '2px' },
     amount: { fontSize: '16px', fontWeight: '700', color: '#006d2f' },
     coupon: { display: 'block', fontSize: '11px', color: '#16a34a', marginTop: '2px' },
     date: { fontSize: '11px', color: '#8e9eab', marginTop: '4px' },
-    cardActions: { display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 },
+    cardActions: { display: 'flex', gap: '6px', alignItems: 'center', width: '100%' },
     viewBtn: { padding: '7px 14px', background: '#006d2f', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-    statusSelect: { padding: '6px 8px', border: '1px solid #ddd', borderRadius: '7px', fontSize: '12px', background: '#fff', cursor: 'pointer', maxWidth: '130px' },
+    statusSelect: { padding: '6px 8px', border: '1px solid #ddd', borderRadius: '7px', fontSize: '12px', background: '#fff', cursor: 'pointer' },
 };
 
 export default Orders;
