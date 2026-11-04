@@ -377,7 +377,14 @@ const CombinedInvoice = () => {
                                             {(item.image || item.product_image) &&
                                                 <img src={item.image || item.product_image} alt={item.name} style={{ width:22, height:22, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
                                             }
-                                            <span style={{ fontSize:8.5 }}>{item.name || item.product_name || 'Item'}</span>
+                                            <span style={{ fontSize:8.5 }}>
+                                                {item.name || item.product_name || 'Item'}
+                                                {(item.selectedSlots || []).length > 0 && (
+                                                    <span style={{ display:'block', fontSize:7.5, color:'#006d2f', marginTop:1 }}>
+                                                        👤 {[...new Set((item.selectedSlots || []).map(s => s.staffName).filter(Boolean))].join(', ')}
+                                                    </span>
+                                                )}
+                                            </span>
                                         </div>
                                     </td>
                                     <td className="td" style={{ textAlign:'center', fontSize:8.5 }}>{qty}</td>

@@ -131,6 +131,11 @@ const ThermalBill = () => {
                 {items.map((item, i) => (
                     <div key={i} style={{ marginTop: 3 }}>
                         <div style={{ fontSize: '11px' }}>{item.name || 'Product'}{item.weight ? ` (${item.weight}${item.unit || ''})` : ''}</div>
+                        {(item.selectedSlots || []).length > 0 && (
+                            <div style={{ fontSize: '10px', color: '#006d2f' }}>
+                                Staff: {[...new Set((item.selectedSlots || []).map(s => s.staffName).filter(Boolean))].join(', ')}
+                            </div>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
                             <span style={{ flex: 1 }}>@ Rs.{parseFloat(item.price || 0).toFixed(2)}</span>
                             <span style={{ width: 30, textAlign: 'center' }}>{item.quantity || 1}</span>
