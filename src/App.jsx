@@ -7,6 +7,7 @@ import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import OrderBill from './pages/OrderBill';
 import ThermalBill from './pages/ThermalBill';
+import CombinedInvoice from './pages/CombinedInvoice';
 import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Staff from './pages/Staff';
@@ -50,7 +51,7 @@ const App = () => {
     const urlSubdomain = params.get('store');
     const storedSubdomain = localStorage.getItem('currentStoreSubdomain');
     const isThermalPage = window.location.pathname.includes('/thermal');
-    const isBillPage = window.location.pathname.includes('/bill');
+    const isBillPage = window.location.pathname.includes('/bill') || window.location.pathname.includes('/combined-invoice');
     // Restore session from URL params on thermal and bill pages
     if (isThermalPage || isBillPage) {
         const tp = new URLSearchParams(window.location.search);
@@ -164,6 +165,7 @@ const getStaffRedirect = (pageKey) => {
                 <Route path="/orders/:id" element={isAuthenticated ? (getStaffRedirect('orders') ? <Navigate to={getStaffRedirect('orders')} /> : <OrderDetail />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders/:id/bill" element={isAuthenticated ? (getStaffRedirect('orders') ? <Navigate to={getStaffRedirect('orders')} /> : <OrderBill />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/orders/:id/thermal" element={<ThermalBill />} />
+                <Route path="/orders/combined-invoice" element={isAuthenticated ? (getStaffRedirect('orders') ? <Navigate to={getStaffRedirect('orders')} /> : <CombinedInvoice />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/customers" element={isAuthenticated ? (getStaffRedirect('customers') ? <Navigate to={getStaffRedirect('customers')} /> : <Customers />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/reports" element={isAuthenticated ? (getStaffRedirect('reports') ? <Navigate to={getStaffRedirect('reports')} /> : <Reports />) : <Navigate to={`/login${window.location.search}`} />} />
                 <Route path="/staff" element={isAuthenticated ? (getStaffRedirect('staff') ? <Navigate to={getStaffRedirect('staff')} /> : <Staff />) : <Navigate to={`/login${window.location.search}`} />} />
