@@ -47,7 +47,8 @@ const ThermalBill = () => {
     const storeName = storeInfo?.config?.brand?.storeName || storeInfo?.store_name || localStorage.getItem('currentStoreName') || 'Store';
     const storePhone = storeInfo?.config?.profile?.officeNumber || '';
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
-    const storeGST = storeInfo?.config?.cart?.gstNumber || '';
+    const storeGST    = storeInfo?.config?.cart?.gstNumber || '';
+    const storeFSSAI  = storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
@@ -75,7 +76,8 @@ const ThermalBill = () => {
                 <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px', marginBottom: 2 }}>{storeName}</div>
                 {storePhone && <div style={{ textAlign: 'center', fontSize: '11px' }}>Tel: {storePhone}</div>}
                 {storeAddress && <div style={{ textAlign: 'center', fontSize: '11px', marginBottom: 2 }}>{storeAddress}</div>}
-                {storeGST && <div style={{ textAlign: 'center', fontSize: '11px' }}>GSTIN: {storeGST}</div>}
+                {storeGST    && <div style={{ textAlign: 'center', fontSize: '11px' }}>GSTIN: {storeGST}</div>}
+                {storeFSSAI  && <div style={{ textAlign: 'center', fontSize: '11px' }}>FSSAI: {storeFSSAI}</div>}
                 <div style={{ textAlign: 'center', fontSize: '11px', marginTop: 4 }}>{line}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: 4 }}>
                     <span>Bill#: {(order.order_id || order.id || '').slice(-8)}</span>

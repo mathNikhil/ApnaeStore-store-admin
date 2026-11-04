@@ -48,6 +48,7 @@ const OrderBill = () => {
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeLogo    = storeInfo?.config?.brand?.logoUrl || null;
     const storeGST     = storeInfo?.config?.cart?.gstNumber || '';
+    const storeFSSAI   = storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const storePAN     = storeInfo?.config?.cart?.panNumber || storeInfo?.config?.profile?.panNumber || '';
     const hsnCode      = storeInfo?.config?.cart?.hsnCode || '';
     const storeState   = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';
@@ -184,7 +185,8 @@ const OrderBill = () => {
             <div class="center bold" style="font-size:15px;">${esc(storeName)}</div>
             ${storeAddress ? `<div class="center" style="font-size:10px;">${esc(storeAddress)}</div>` : ''}
             ${storePhone ? `<div class="center" style="font-size:10px;">Ph: ${esc(storePhone)}</div>` : ''}
-            ${storeGST ? `<div class="center" style="font-size:10px;">GSTIN: ${esc(storeGST)}</div>` : ''}
+            ${storeGST   ? `<div class="center" style="font-size:10px;">GSTIN: ${esc(storeGST)}</div>` : ''}
+            ${storeFSSAI ? `<div class="center" style="font-size:10px;">FSSAI: ${esc(storeFSSAI)}</div>` : ''}
             <div class="divider"></div>
             <div class="row"><span>Bill No:</span><span>${esc(invoiceNo)}</span></div>
             <div class="row"><span>Date:</span><span>${esc(orderDate)}</span></div>
@@ -235,7 +237,8 @@ const OrderBill = () => {
                         <div style={{ fontSize:8, color:'#556067', marginTop:2, lineHeight:1.6 }}>
                             {storeAddress && <>{storeAddress}<br/></>}
                             {storePhone && <>📞 {storePhone}&nbsp;&nbsp;</>}{storeEmail && <>✉ {storeEmail}<br/></>}
-                            {storeGST && <>GSTIN: {storeGST}&nbsp;&nbsp;</>}{storePAN && <>PAN: {storePAN}</>}
+                            {storeGST    && <>GSTIN: {storeGST}&nbsp;&nbsp;</>}{storePAN && <>PAN: {storePAN}</>}
+                            {storeFSSAI  && <><br/>FSSAI Lic. No.: {storeFSSAI}</>}
                         </div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>

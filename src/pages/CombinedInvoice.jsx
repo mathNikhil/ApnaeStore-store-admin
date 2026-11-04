@@ -56,6 +56,7 @@ const CombinedInvoice = () => {
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeLogo    = storeInfo?.config?.brand?.logoUrl || null;
     const storeGST     = storeInfo?.config?.cart?.gstNumber || '';
+    const storeFSSAI   = storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const storePAN     = storeInfo?.config?.cart?.panNumber || storeInfo?.config?.profile?.panNumber || '';
     const hsnCode      = storeInfo?.config?.cart?.hsnCode || '';
     const storeState   = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';
@@ -108,7 +109,8 @@ const CombinedInvoice = () => {
                     <div style={{ textAlign:'center', fontWeight:'bold', fontSize:'16px', marginBottom:2 }}>{storeName}</div>
                     {storePhone && <div style={{ textAlign:'center', fontSize:'11px' }}>Tel: {storePhone}</div>}
                     {storeAddress && <div style={{ textAlign:'center', fontSize:'11px', marginBottom:2 }}>{storeAddress}</div>}
-                    {storeGST && <div style={{ textAlign:'center', fontSize:'11px' }}>GSTIN: {storeGST}</div>}
+                    {storeGST   && <div style={{ textAlign:'center', fontSize:'11px' }}>GSTIN: {storeGST}</div>}
+                    {storeFSSAI && <div style={{ textAlign:'center', fontSize:'11px' }}>FSSAI: {storeFSSAI}</div>}
                     <div style={{ textAlign:'center', fontSize:'11px', marginTop:4 }}>{line}</div>
                     <div style={{ fontSize:'11px', fontWeight:'bold', textAlign:'center', marginTop:4 }}>COMBINED BILL — {orders.length} ORDERS</div>
                     <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', marginTop:4 }}>
@@ -235,7 +237,8 @@ const CombinedInvoice = () => {
                         <div style={{ fontSize:8, color:'#556067', marginTop:2, lineHeight:1.6 }}>
                             {storeAddress && <>{storeAddress}<br/></>}
                             {storePhone && <>📞 {storePhone}&nbsp;&nbsp;</>}{storeEmail && <>✉ {storeEmail}<br/></>}
-                            {storeGST && <>GSTIN: {storeGST}&nbsp;&nbsp;</>}{storePAN && <>PAN: {storePAN}</>}
+                            {storeGST    && <>GSTIN: {storeGST}&nbsp;&nbsp;</>}{storePAN && <>PAN: {storePAN}</>}
+                            {storeFSSAI  && <><br/>FSSAI Lic. No.: {storeFSSAI}</>}
                         </div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
