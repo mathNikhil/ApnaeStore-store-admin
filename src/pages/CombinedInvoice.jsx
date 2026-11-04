@@ -87,25 +87,19 @@ const CombinedInvoice = () => {
     const customerName  = primaryOrder.customer_name || primaryOrder.customer_phone || 'Customer';
     const customerPhone = primaryOrder.customer_phone || '';
     const customerEmail = primaryOrder.customer_email || '';
-    // Collect unique staff names across all orders — check all possible API field names
-    // Log order keys to console so we can find the correct field name
+    // Extract staff name — check all possible API field names on order and nested staff object
     if (orders.length > 0) {
-        console.log('[CombinedInvoice] order keys:', Object.keys(orders[0]));
-        console.log('[CombinedInvoice] order staff fields:', {
-            staff_name: orders[0].staff_name,
-            assigned_staff_name: orders[0].assigned_staff_name,
-            staffName: orders[0].staffName,
-            assignedStaff: orders[0].assignedStaff,
-            staff: orders[0].staff,
-            assigned_to: orders[0].assigned_to,
-            handler: orders[0].handler,
-        });
+        console.log('[DEBUG] order keys:', Object.keys(orders[0]));
+        console.log('[DEBUG] full order:', JSON.stringify(orders[0], null, 2));
     }
-    const staffNames = [...new Set(orders.map(o =>
-        o.staff_name || o.assigned_staff_name || o.staffName || o.assignedStaff ||
-        o.assigned_to || o.handler ||
-        (o.staff && (o.staff.name || o.staff.staff_name || o.staff.full_name)) || ''
-    ).filter(Boolean))];
+    const getStaffFromOrder = (o) =>
+        o.staff_name || o.assigned_staff_name || o.staffName || o.assignedStaffName ||
+        o.assigned_to || o.handler || o.served_by || o.therapist || o.consultant ||
+        (o.staff && typeof o.staff === 'string' ? o.staff : '') ||
+        (o.staff && typeof o.staff === 'object' ? (o.staff.name || o.staff.full_name || o.staff.staff_name || '') : '') ||
+        (o.assignedStaff && typeof o.assignedStaff === 'string' ? o.assignedStaff : '') ||
+        (o.assignedStaff && typeof o.assignedStaff === 'object' ? (o.assignedStaff.name || '') : '') || '';
+    const staffNames = [...new Set(orders.map(getStaffFromOrder).filter(Boolean))];
     const staffLabel = staffNames.join(', ');
 
     // Flatten all items from all orders, tagged with order ID
@@ -118,17 +112,21 @@ const CombinedInvoice = () => {
 
     // ── Thermal view ─────────────────────────────────────────────────────────
     if (printMode === 'thermal') {
-        const thermalGstRate  = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
+        const thermalGstRate   = parseFloat(storeInfo?.config?.cart?.gstRate || 0);
         const thermalEnableGST = storeInfo?.config?.cart?.enableGST || false;
-        const thermalSubtotal = allItems.reduce((s, i) => s + parseFloat(i.price || 0) * parseInt(i.quantity || 1), 0);
+        // prices are GST-inclusive — sum them directly as the inclusive total
+        const thermalInclTotal = allItems.reduce((s, i) => s + parseFloat(i.price || 0) * parseInt(i.quantity || 1), 0);
+        // extract GST from inclusive total
         const thermalGstAmt = thermalEnableGST ? allItems.reduce((sum, i) => {
             const rate = i.gstRate != null ? parseFloat(i.gstRate) : thermalGstRate;
             const lineTotal = parseFloat(i.price || 0) * parseInt(i.quantity || 1);
             return sum + (rate > 0 ? lineTotal - lineTotal / (1 + rate / 100) : 0);
         }, 0) : 0;
-        const thermalDelivery = orders.reduce((s, o) => s + parseFloat(o.delivery_charge || 0), 0);
-        const thermalDiscount = orders.reduce((s, o) => s + parseFloat(o.discount_amount || 0), 0);
-        const thermalTotal    = thermalSubtotal + thermalGstAmt + thermalDelivery - thermalDiscount;
+        const thermalBeforeTax = thermalInclTotal - thermalGstAmt;
+        const thermalDelivery  = orders.reduce((s, o) => s + parseFloat(o.delivery_charge || 0), 0);
+        const thermalDiscount  = orders.reduce((s, o) => s + parseFloat(o.discount_amount || 0), 0);
+        // use order.total_amount as source of truth, fall back to computed
+        const thermalTotal     = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0) || (thermalInclTotal + thermalDelivery - thermalDiscount);
         const line = '--------------------------------';
         return (
             <>
@@ -180,8 +178,8 @@ const CombinedInvoice = () => {
                     ))}
                     <div style={{ fontSize:'11px', marginTop:4 }}>{line}</div>
                     <div style={{ fontSize:'11px', marginTop:2 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between' }}><span>Subtotal</span><span>Rs.{thermalSubtotal.toFixed(2)}</span></div>
-                        {thermalEnableGST && thermalGstAmt > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>GST</span><span>Rs.{thermalGstAmt.toFixed(2)}</span></div>}
+                        <div style={{ display:'flex', justifyContent:'space-between' }}><span>Before Tax</span><span>Rs.{thermalBeforeTax.toFixed(2)}</span></div>
+                        {thermalEnableGST && thermalGstAmt > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>GST ({thermalGstRate}%)</span><span>Rs.{thermalGstAmt.toFixed(2)}</span></div>}
                         {thermalDelivery > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>Delivery</span><span>Rs.{thermalDelivery.toFixed(2)}</span></div>}
                         {thermalDiscount > 0 && <div style={{ display:'flex', justifyContent:'space-between' }}><span>Discount</span><span>-Rs.{thermalDiscount.toFixed(2)}</span></div>}
                     </div>
