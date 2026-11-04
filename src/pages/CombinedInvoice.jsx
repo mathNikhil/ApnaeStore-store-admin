@@ -56,7 +56,7 @@ const CombinedInvoice = () => {
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeLogo    = storeInfo?.config?.brand?.logoUrl || null;
     const storeGST     = storeInfo?.config?.cart?.gstNumber || '';
-    const storeFSSAI   = storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
+    const storeFSSAI   = storeInfo?.config?.cart?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const storePAN     = storeInfo?.config?.cart?.panNumber || storeInfo?.config?.profile?.panNumber || '';
     const hsnCode      = storeInfo?.config?.cart?.hsnCode || '';
     const storeState   = storeInfo?.config?.cart?.storeState || storeInfo?.config?.profile?.state || '';

@@ -48,7 +48,7 @@ const ThermalBill = () => {
     const storePhone = storeInfo?.config?.profile?.officeNumber || '';
     const storeAddress = storeInfo?.config?.profile?.storeAddress || '';
     const storeGST    = storeInfo?.config?.cart?.gstNumber || '';
-    const storeFSSAI  = storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
+    const storeFSSAI  = storeInfo?.config?.cart?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
