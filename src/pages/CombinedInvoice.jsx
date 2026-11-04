@@ -88,9 +88,23 @@ const CombinedInvoice = () => {
     const customerPhone = primaryOrder.customer_phone || '';
     const customerEmail = primaryOrder.customer_email || '';
     // Collect unique staff names across all orders — check all possible API field names
+    // Log order keys to console so we can find the correct field name
+    if (orders.length > 0) {
+        console.log('[CombinedInvoice] order keys:', Object.keys(orders[0]));
+        console.log('[CombinedInvoice] order staff fields:', {
+            staff_name: orders[0].staff_name,
+            assigned_staff_name: orders[0].assigned_staff_name,
+            staffName: orders[0].staffName,
+            assignedStaff: orders[0].assignedStaff,
+            staff: orders[0].staff,
+            assigned_to: orders[0].assigned_to,
+            handler: orders[0].handler,
+        });
+    }
     const staffNames = [...new Set(orders.map(o =>
         o.staff_name || o.assigned_staff_name || o.staffName || o.assignedStaff ||
-        (o.staff && (o.staff.name || o.staff.staff_name)) || ''
+        o.assigned_to || o.handler ||
+        (o.staff && (o.staff.name || o.staff.staff_name || o.staff.full_name)) || ''
     ).filter(Boolean))];
     const staffLabel = staffNames.join(', ');
 
@@ -335,7 +349,7 @@ const CombinedInvoice = () => {
 
                 <hr className="divider" />
 
-                {/* ITEMS TABLE — simple: Item | Qty | Price | CGST | SGST | Total */}
+                {/* ITEMS TABLE — Item | Qty | Price (excl tax) | CGST | SGST | Total (incl tax) */}
                 <table style={{ width:'100%', borderCollapse:'collapse', marginTop:4 }}>
                     <thead>
                         <tr>
@@ -349,29 +363,31 @@ const CombinedInvoice = () => {
                     </thead>
                     <tbody>
                         {allItems.length > 0 ? allItems.map((item, idx) => {
-                            const itemGstRate = item.gstRate != null ? parseFloat(item.gstRate) : gstRate;
-                            const qty         = Number(item.quantity || item.qty || 1);
-                            const unitPrice   = Number(item.price || item.unit_price || 0);
-                            const itemTotal   = unitPrice * qty;
-                            const itemTaxAmt  = enableGST && itemGstRate > 0 ? itemTotal - itemTotal / (1 + itemGstRate / 100) : 0;
-                            const itemCgst    = (itemTaxAmt / 2).toFixed(2);
-                            const itemSgst    = itemCgst;
+                            // price from API is GST-inclusive; extract tax from it
+                            const itemGstRate  = item.gstRate != null ? parseFloat(item.gstRate) : gstRate;
+                            const qty          = Number(item.quantity || item.qty || 1);
+                            const inclusiveTotal = Number(item.price || item.unit_price || 0) * qty;
+                            // taxable base = inclusive / (1 + rate/100)
+                            const taxableBase  = enableGST && itemGstRate > 0 ? inclusiveTotal / (1 + itemGstRate / 100) : inclusiveTotal;
+                            const totalTax     = inclusiveTotal - taxableBase;
+                            const itemCgst     = (totalTax / 2).toFixed(2);
+                            const itemSgst     = itemCgst;
+                            const unitExcl     = taxableBase / qty; // per-unit excl price for display
                             return (
                                 <tr key={idx} style={{ borderBottom:'1px solid #f2f4f7' }}>
                                     <td className="td">
                                         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                                            {item.image || item.product_image
-                                                ? <img src={item.image || item.product_image} alt={item.name} style={{ width:22, height:22, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
-                                                : null
+                                            {(item.image || item.product_image) &&
+                                                <img src={item.image || item.product_image} alt={item.name} style={{ width:22, height:22, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
                                             }
                                             <span style={{ fontSize:8.5 }}>{item.name || item.product_name || 'Item'}</span>
                                         </div>
                                     </td>
                                     <td className="td" style={{ textAlign:'center', fontSize:8.5 }}>{qty}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:8.5 }}>₹{unitPrice.toFixed(2)}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:8.5 }}>₹{unitExcl.toFixed(2)}</td>
                                     {enableGST && <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemGstRate/2}%<br/>₹{itemCgst}</td>}
                                     {enableGST && <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemGstRate/2}%<br/>₹{itemSgst}</td>}
-                                    <td className="td" style={{ textAlign:'right', fontSize:8.5, fontWeight:700 }}>₹{itemTotal.toFixed(2)}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:8.5, fontWeight:700 }}>₹{inclusiveTotal.toFixed(2)}</td>
                                 </tr>
                             );
                         }) : (
@@ -380,7 +396,7 @@ const CombinedInvoice = () => {
                     </tbody>
                 </table>
 
-                {/* TOTALS — clean summary */}
+                {/* TOTALS — Before Tax → CGST → SGST → Delivery → Grand Total */}
                 <div style={{ marginTop:6, maxWidth:260, marginLeft:'auto' }}>
                     <div className="totals-row"><span>Before Tax Total</span><span>₹{(itemsSubtotal - itemsTaxTotal).toFixed(2)}</span></div>
                     {enableGST && itemsTaxTotal > 0 && (

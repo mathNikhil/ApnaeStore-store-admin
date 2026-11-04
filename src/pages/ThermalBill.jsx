@@ -64,7 +64,10 @@ const ThermalBill = () => {
     const storeGST    = storeInfo?.config?.cart?.gstNumber || '';
     const storeFSSAI  = storeInfo?.config?.cart?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicence || storeInfo?.config?.profile?.fssaiLicense || '';
     const dineInLabel = storeInfo?.config?.cart?.dineInLabel || 'Dine In';
-    const staffName   = order?.staff_name || order?.assigned_staff_name || order?.staff?.name || '';
+    // Log order keys so we can find the actual staff field name
+    console.log('[ThermalBill] order keys:', Object.keys(order || {}));
+    console.log('[ThermalBill] staff fields:', { staff_name: order?.staff_name, assigned_staff_name: order?.assigned_staff_name, staff: order?.staff, assigned_to: order?.assigned_to, handler: order?.handler });
+    const staffName   = order?.staff_name || order?.assigned_staff_name || order?.staffName || order?.assigned_to || order?.handler || order?.staff?.name || order?.staff?.full_name || '';
     const enableGST = storeInfo?.config?.cart?.enableGST || false;
     const gstRate = storeInfo?.config?.cart?.gstRate || 0;
 
