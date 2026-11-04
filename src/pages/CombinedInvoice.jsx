@@ -87,8 +87,11 @@ const CombinedInvoice = () => {
     const customerName  = primaryOrder.customer_name || primaryOrder.customer_phone || 'Customer';
     const customerPhone = primaryOrder.customer_phone || '';
     const customerEmail = primaryOrder.customer_email || '';
-    // Collect unique staff names across all orders
-    const staffNames = [...new Set(orders.map(o => o.staff_name || o.assigned_staff_name || (o.staff && o.staff.name) || '').filter(Boolean))];
+    // Collect unique staff names across all orders — check all possible API field names
+    const staffNames = [...new Set(orders.map(o =>
+        o.staff_name || o.assigned_staff_name || o.staffName || o.assignedStaff ||
+        (o.staff && (o.staff.name || o.staff.staff_name)) || ''
+    ).filter(Boolean))];
     const staffLabel = staffNames.join(', ');
 
     // Flatten all items from all orders, tagged with order ID
@@ -313,7 +316,9 @@ const CombinedInvoice = () => {
                         <div className="val">{customerName}</div>
                         {customerPhone && <div className="sub">📞 {customerPhone}</div>}
                         {customerEmail && <div className="sub">✉ {customerEmail}</div>}
-                        {staffLabel && <div className="sub" style={{ marginTop:3 }}>👤 Staff: {staffLabel}</div>}
+                        {staffLabel && (
+                            <div style={{ marginTop:4, fontSize:8, fontWeight:700, color:'#006d2f' }}>👤 Staff: {staffLabel}</div>
+                        )}
                     </div>
                     <div>
                         <div className="lbl">Order References</div>
@@ -330,75 +335,62 @@ const CombinedInvoice = () => {
 
                 <hr className="divider" />
 
-                {/* ITEMS TABLE */}
+                {/* ITEMS TABLE — simple: Item | Qty | Price | CGST | SGST | Total */}
                 <table style={{ width:'100%', borderCollapse:'collapse', marginTop:4 }}>
                     <thead>
                         <tr>
                             <th className="th" style={{ textAlign:'left' }}>Item</th>
-                            <th className="th" style={{ textAlign:'center' }}>Order#</th>
-                            <th className="th" style={{ textAlign:'center' }}>HSN/SAC</th>
-                            <th className="th" style={{ textAlign:'center' }}>Variant</th>
-                            <th className="th" style={{ textAlign:'right' }}>Taxable Value</th>
                             <th className="th" style={{ textAlign:'center' }}>Qty</th>
                             <th className="th" style={{ textAlign:'right' }}>Price</th>
-                            <th className="th" style={{ textAlign:'right' }}>CGST</th>
-                            <th className="th" style={{ textAlign:'right' }}>SGST</th>
-                            <th className="th" style={{ textAlign:'right' }}>Subtotal</th>
+                            {enableGST && <th className="th" style={{ textAlign:'right' }}>CGST</th>}
+                            {enableGST && <th className="th" style={{ textAlign:'right' }}>SGST</th>}
+                            <th className="th" style={{ textAlign:'right' }}>Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {allItems.length > 0 ? allItems.map((item, idx) => {
-                            const itemGstRate  = item.gstRate != null ? parseFloat(item.gstRate) : gstRate;
-                            const itemCgstRate = itemGstRate / 2;
-                            const itemSgstRate = itemGstRate / 2;
-                            const itemTotal    = Number(item.price || item.unit_price || 0) * Number(item.quantity || item.qty || 1);
-                            const itemTaxable  = enableGST && itemGstRate > 0 ? (itemTotal / (1 + itemGstRate / 100)).toFixed(2) : itemTotal.toFixed(2);
-                            const itemCgst     = enableGST && itemGstRate > 0 ? ((itemTotal - parseFloat(itemTaxable)) / 2).toFixed(2) : '0.00';
-                            const itemSgst     = itemCgst;
-                            const itemHsn      = item.hsnCode || hsnCode || '—';
-                            const variantLabel = item.variant || item.size || item.variation_name || item.size_label || '—';
+                            const itemGstRate = item.gstRate != null ? parseFloat(item.gstRate) : gstRate;
+                            const qty         = Number(item.quantity || item.qty || 1);
+                            const unitPrice   = Number(item.price || item.unit_price || 0);
+                            const itemTotal   = unitPrice * qty;
+                            const itemTaxAmt  = enableGST && itemGstRate > 0 ? itemTotal - itemTotal / (1 + itemGstRate / 100) : 0;
+                            const itemCgst    = (itemTaxAmt / 2).toFixed(2);
+                            const itemSgst    = itemCgst;
                             return (
                                 <tr key={idx} style={{ borderBottom:'1px solid #f2f4f7' }}>
                                     <td className="td">
                                         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                                             {item.image || item.product_image
-                                                ? <img src={item.image || item.product_image} alt={item.name} style={{ width:24, height:24, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
-                                                : <div style={{ width:24, height:24, background:'#f2f4f7', borderRadius:3, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, flexShrink:0 }}>📦</div>
+                                                ? <img src={item.image || item.product_image} alt={item.name} style={{ width:22, height:22, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
+                                                : null
                                             }
-                                            <span style={{ fontSize:8 }}>{item.name || item.product_name || 'Item'}</span>
+                                            <span style={{ fontSize:8.5 }}>{item.name || item.product_name || 'Item'}</span>
                                         </div>
                                     </td>
-                                    <td className="td" style={{ textAlign:'center' }}>
-                                        <span className="order-tag">{item._orderId}</span>
-                                    </td>
-                                    <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{itemHsn}</td>
-                                    <td className="td" style={{ textAlign:'center', fontSize:'7.5px', color:'#8e9eab' }}>{variantLabel}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:8 }}>₹{itemTaxable}</td>
-                                    <td className="td" style={{ textAlign:'center', fontSize:8 }}>{item.quantity || item.qty || 1}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:8 }}>₹{Number(item.price || item.unit_price || 0).toFixed(2)}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemCgstRate}%<br/>₹{itemCgst}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemSgstRate}%<br/>₹{itemSgst}</td>
-                                    <td className="td" style={{ textAlign:'right', fontSize:8, fontWeight:700 }}>₹{itemTotal.toFixed(2)}</td>
+                                    <td className="td" style={{ textAlign:'center', fontSize:8.5 }}>{qty}</td>
+                                    <td className="td" style={{ textAlign:'right', fontSize:8.5 }}>₹{unitPrice.toFixed(2)}</td>
+                                    {enableGST && <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemGstRate/2}%<br/>₹{itemCgst}</td>}
+                                    {enableGST && <td className="td" style={{ textAlign:'right', fontSize:'7.5px', color:'#556067' }}>{itemGstRate/2}%<br/>₹{itemSgst}</td>}
+                                    <td className="td" style={{ textAlign:'right', fontSize:8.5, fontWeight:700 }}>₹{itemTotal.toFixed(2)}</td>
                                 </tr>
                             );
                         }) : (
-                            <tr><td colSpan={10} style={{ padding:'8px', textAlign:'center', color:'#999', fontSize:12 }}>No items</td></tr>
+                            <tr><td colSpan={6} style={{ padding:'8px', textAlign:'center', color:'#999', fontSize:12 }}>No items</td></tr>
                         )}
                     </tbody>
                 </table>
 
-                {/* TOTALS */}
-                <div style={{ marginTop:4, maxWidth:280, marginLeft:'auto' }}>
-                    <div className="totals-row"><span>Subtotal</span><span>₹{itemsSubtotal.toFixed(2)}</span></div>
+                {/* TOTALS — clean summary */}
+                <div style={{ marginTop:6, maxWidth:260, marginLeft:'auto' }}>
+                    <div className="totals-row"><span>Before Tax Total</span><span>₹{(itemsSubtotal - itemsTaxTotal).toFixed(2)}</span></div>
                     {enableGST && itemsTaxTotal > 0 && (
                         <>
-                            <div className="totals-row"><span>Taxable Amount</span><span>₹{taxableAmt}</span></div>
                             <div className="totals-row">
-                                <span>CGST{!hasPerItemHSN && gstRate > 0 ? ` @ ${gstRate/2}%` : ''}</span>
+                                <span>CGST{gstRate > 0 ? ` @ ${gstRate/2}%` : ''}</span>
                                 <span>₹{cgstAmt}</span>
                             </div>
                             <div className="totals-row">
-                                <span>SGST{!hasPerItemHSN && gstRate > 0 ? ` @ ${gstRate/2}%` : ''}</span>
+                                <span>SGST{gstRate > 0 ? ` @ ${gstRate/2}%` : ''}</span>
                                 <span>₹{sgstAmt}</span>
                             </div>
                         </>
