@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
 import useStaffAccess from '../hooks/useStaffAccess';
+import { RiskBadge, riskNeedsAck, riskConfirmText } from '../components/store-admin/RiskBadge';
 
 // ── View-mode icons ───────────────────────────────────────────────────────────
 const TableIcon = () => (
@@ -127,7 +128,9 @@ const Orders = () => {
                 (o.customer_email || '').toLowerCase().includes(term.toLowerCase())
             );
         }
-        if (status !== 'all') {
+        if (status === 'needs_review') {
+            filtered = filtered.filter(o => o.risk_status === 'flagged');
+        } else if (status !== 'all') {
             filtered = filtered.filter(o => o.status === status);
         }
         const addr = address !== undefined ? address : addressFilter;
@@ -190,18 +193,33 @@ const Orders = () => {
     // ── Status update ─────────────────────────────────────────────────────────
     const handleStatusUpdate = async (orderId, newStatus, currentStatus) => {
         if (newStatus === currentStatus) return;
-        if (!window.confirm(`Change order status to ${newStatus.replace(/_/g, ' ').toUpperCase()}?`)) return;
+        const label = newStatus.replace(/_/g, ' ').toUpperCase();
+        const target = orders.find(o => o.id === orderId);
+        // Flagged pending orders: show the flags in the confirmation and send an explicit override.
+        const needsAck = riskNeedsAck(target, newStatus);
+        if (!window.confirm(needsAck ? riskConfirmText(target, label) : `Change order status to ${label}?`)) return;
+
+        const apply = (list) => list.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
         try {
-            const result = await storeAdminAPI.updateOrderStatus(storeId, orderId, newStatus);
+            const result = await storeAdminAPI.updateOrderStatus(storeId, orderId, newStatus, undefined, needsAck);
             if (result.success) {
-                const updateStatus = (list) =>
-                    list.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
-                setOrders(prev => updateStatus(prev));
-                setFilteredOrders(prev => updateStatus(prev));
+                setOrders(prev => apply(prev));
+                setFilteredOrders(prev => apply(prev));
             } else {
                 alert(`❌ Failed to update order status: ${result.error || 'Unknown error'}`);
             }
         } catch (error) {
+            // Server says this order still needs review (e.g. flags appeared after the list loaded)
+            if (error.code === 'RISK_REVIEW_REQUIRED') {
+                const flagged = { risk_flags: error.flags };
+                if (window.confirm(riskConfirmText(flagged, label))) {
+                    try {
+                        const retry = await storeAdminAPI.updateOrderStatus(storeId, orderId, newStatus, undefined, true);
+                        if (retry.success) { setOrders(prev => apply(prev)); setFilteredOrders(prev => apply(prev)); }
+                    } catch (e2) { alert(`❌ Error: ${e2.message || 'Failed to update order status'}`); }
+                }
+                return;
+            }
             console.error('Error updating status:', error);
             alert(`❌ Error: ${error.message || 'Failed to update order status'}`);
         }
@@ -224,6 +242,7 @@ const Orders = () => {
         { value: 'out_for_delivery', label: 'Out for Delivery' },
         { value: 'delivered', label: 'Delivered' },
         { value: 'cancelled', label: 'Cancelled' },
+        { value: 'needs_review', label: '⚠ Needs review' },
     ];
 
     const allStatuses = [
@@ -297,6 +316,7 @@ const Orders = () => {
                         {order.branch_name && (
                             <span style={cardStyles.branchBadge}>{order.branch_name}</span>
                         )}
+                        <RiskBadge order={order} />
                     </div>
                     <span style={{ ...cardStyles.statusBadge, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
                         {getStatusLabel(order.status)}
@@ -604,7 +624,10 @@ const Orders = () => {
                                                     </div>
                                                 )}
                                             </td>
-                                            <td style={styles.td}><span className={getStatusClass(order.status)}>{getStatusLabel(order.status)}</span></td>
+                                            <td style={styles.td}>
+                                                <span className={getStatusClass(order.status)}>{getStatusLabel(order.status)}</span>
+                                                <div style={{ marginTop: 4 }}><RiskBadge order={order} /></div>
+                                            </td>
                                             <td style={{ ...styles.td, fontSize: '13px' }}>{new Date(order.created_at).toLocaleString()}</td>
                                             <td style={styles.td}>
                                                 <div style={styles.actionButtons}>

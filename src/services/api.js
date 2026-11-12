@@ -41,7 +41,11 @@ const apiRequest = async (endpoint, method = 'GET', data = null) => {
         }
 
         if (!response.ok) {
-            throw new Error(result.error || result.message || 'Something went wrong');
+            const err = new Error(result.error || result.message || 'Something went wrong');
+            err.status = response.status;
+            err.code = result.code;      // e.g. RISK_REVIEW_REQUIRED
+            err.flags = result.flags;
+            throw err;
         }
         return result;
     } catch (error) {
@@ -59,8 +63,8 @@ export const storeAdminAPI = {
     },
     getOrder: (storeId, orderId) => 
         apiRequest(`/api/store/${storeId}/admin/orders/${orderId}`),
-    updateOrderStatus: (storeId, orderId, status, note) => 
-        apiRequest(`/api/store/${storeId}/admin/orders/${orderId}/status`, 'PUT', { status, note }),
+    updateOrderStatus: (storeId, orderId, status, note, overrideRisk = false) => 
+        apiRequest(`/api/store/${storeId}/admin/orders/${orderId}/status`, 'PUT', { status, note, ...(overrideRisk ? { overrideRisk: true } : {}) }),
     getOrderStats: (storeId) =>
         apiRequest(`/api/store/${storeId}/admin/orders/stats`),
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
 import useStaffAccess from '../hooks/useStaffAccess';
+import { RiskBadge, RiskPanel, riskNeedsAck, riskConfirmText, hl } from '../components/store-admin/RiskBadge';
 
 const OrderDetail = () => {
     const { id } = useParams();
@@ -81,18 +82,29 @@ const OrderDetail = () => {
             return;
         }
 
-        if (!window.confirm(`Change order status to ${selectedStatus.replace('_', ' ').toUpperCase()}?`)) return;
+        const label = selectedStatus.replace('_', ' ').toUpperCase();
+        const needsAck = riskNeedsAck(order, selectedStatus);
+        if (!window.confirm(needsAck ? riskConfirmText(order, label) : `Change order status to ${label}?`)) return;
 
         try {
-            const result = await storeAdminAPI.updateOrderStatus(storeId, order.id, selectedStatus);
+            const result = await storeAdminAPI.updateOrderStatus(storeId, order.id, selectedStatus, undefined, needsAck);
             if (result.success) {
-                alert(`✅ Order status updated to ${selectedStatus.replace('_', ' ').toUpperCase()}`);
+                alert(`✅ Order status updated to ${label}`);
                 fetchOrderDetail(storeId);
             } else {
                 alert('❌ Failed to update status');
             }
         } catch (error) {
             console.error('Error updating status:', error);
+            if (error.code === 'RISK_REVIEW_REQUIRED') {
+                if (window.confirm(riskConfirmText({ risk_flags: error.flags }, label))) {
+                    try {
+                        const retry = await storeAdminAPI.updateOrderStatus(storeId, order.id, selectedStatus, undefined, true);
+                        if (retry.success) { alert(`✅ Order status updated to ${label}`); fetchOrderDetail(storeId); }
+                    } catch (e2) { alert('❌ Error updating order status'); }
+                }
+                return;
+            }
             alert('❌ Error updating order status');
         }
     };
@@ -231,6 +243,7 @@ const OrderDetail = () => {
                         <span className={getStatusClass(order.status)} style={{fontSize:'14px',padding:'8px 16px'}}>
                             {getStatusLabel(order.status)}
                         </span>
+                        <div style={{ marginTop: 6, textAlign: 'right' }}><RiskBadge order={order} showPassed /></div>
                     </div>
                 </div>
 
@@ -401,13 +414,15 @@ const OrderDetail = () => {
                     </div>
                 </div>
 
+                <RiskPanel order={order} cardStyle={styles.card} titleStyle={styles.cardTitle} />
+
                 <div style={styles.card}>
                     <h3 style={styles.cardTitle}>📍 Shipping Address</h3>
                     {order.delivery_address ? (
                         <div style={{fontSize:'14px',lineHeight:'1.8'}}>
-                            <div><strong>{order.delivery_address.recipientName}</strong> &nbsp;|&nbsp; {order.delivery_address.recipientMobile}</div>
-                            <div>{order.delivery_address.addressLine1}{order.delivery_address.addressLine2 ? ', ' + order.delivery_address.addressLine2 : ''}</div>
-                            <div>{order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}</div>
+                            <div><strong style={hl(order, 'name')}>{order.delivery_address.recipientName}</strong> &nbsp;|&nbsp; <span style={hl(order, 'phone')}>{order.delivery_address.recipientMobile}</span></div>
+                            <div><span style={hl(order, 'address')}>{order.delivery_address.addressLine1}{order.delivery_address.addressLine2 ? ', ' + order.delivery_address.addressLine2 : ''}</span></div>
+                            <div><span style={hl(order, 'city')}>{order.delivery_address.city}</span>, <span style={hl(order, 'state')}>{order.delivery_address.state}</span> - <span style={hl(order, 'pincode')}>{order.delivery_address.pincode}</span></div>
                             {order.delivery_address.landmark && <div style={{color:'#666'}}>Landmark: {order.delivery_address.landmark}</div>}
                         </div>
                     ) : <p style={{color:'#999'}}>Not provided</p>}
