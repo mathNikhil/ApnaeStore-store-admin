@@ -62,6 +62,9 @@ const SHORT_LABEL = {
     name_too_short: 'Name too short',
     address_incomplete: 'Address incomplete',
     address_too_short: 'Address too short',
+    address_no_number: 'No house/flat number',
+    email_disposable: 'Disposable email',
+    order_velocity: 'Many COD orders in 24h',
     outside_delivery_zone: 'Outside delivery zone',
 };
 
