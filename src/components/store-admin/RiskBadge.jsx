@@ -52,6 +52,7 @@ export const RiskBadge = ({ order, showPassed = false }) => {
 const SHORT_LABEL = {
     pincode_invalid: 'Pincode invalid',
     state_pincode_mismatch: 'State ≠ pincode',
+    pincode_range_mismatch: 'State ≠ pincode range',
     city_state_mismatch: 'City is another state',
     city_pincode_mismatch: 'City ≠ pincode',
     state_invalid: 'State invalid',
