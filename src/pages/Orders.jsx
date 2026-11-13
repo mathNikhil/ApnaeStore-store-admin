@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { storeAdminAPI } from '../services/api';
 import useStaffAccess from '../hooks/useStaffAccess';
-import { RiskBadge, riskNeedsAck, riskConfirmText } from '../components/store-admin/RiskBadge';
+import { RiskBadge, RiskCheckCell, riskNeedsAck, riskConfirmText } from '../components/store-admin/RiskBadge';
 
 // ── View-mode icons ───────────────────────────────────────────────────────────
 const TableIcon = () => (
@@ -130,6 +130,8 @@ const Orders = () => {
         }
         if (status === 'needs_review') {
             filtered = filtered.filter(o => o.risk_status === 'flagged');
+        } else if (status === 'risk_ok') {
+            filtered = filtered.filter(o => o.risk_status === 'passed');
         } else if (status !== 'all') {
             filtered = filtered.filter(o => o.status === status);
         }
@@ -242,7 +244,8 @@ const Orders = () => {
         { value: 'out_for_delivery', label: 'Out for Delivery' },
         { value: 'delivered', label: 'Delivered' },
         { value: 'cancelled', label: 'Cancelled' },
-        { value: 'needs_review', label: '⚠ Needs review' },
+        { value: 'needs_review', label: '⚠ Check needed' },
+        { value: 'risk_ok', label: '✓ No check needed' },
     ];
 
     const allStatuses = [
@@ -322,6 +325,9 @@ const Orders = () => {
                         {getStatusLabel(order.status)}
                     </span>
                 </div>
+                {(order.risk_status === 'flagged' || order.risk_status === 'passed') && (
+                    <div style={{ padding: '6px 14px 0' }}><RiskCheckCell order={order} inline /></div>
+                )}
 
                 {/* Customer + type row */}
                 <div style={cardStyles.metaRow}>
@@ -552,6 +558,7 @@ const Orders = () => {
                                     <th style={styles.th}>Items Detail</th>
                                     <th style={styles.th}>Amount</th>
                                     <th style={styles.th}>Status</th>
+                                    <th style={styles.th}>Check</th>
                                     {/* Sortable: Date */}
                                     <th
                                         style={{ ...styles.th, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
@@ -626,8 +633,8 @@ const Orders = () => {
                                             </td>
                                             <td style={styles.td}>
                                                 <span className={getStatusClass(order.status)}>{getStatusLabel(order.status)}</span>
-                                                <div style={{ marginTop: 4 }}><RiskBadge order={order} /></div>
                                             </td>
+                                            <td style={{ ...styles.td, minWidth: 150 }}><RiskCheckCell order={order} /></td>
                                             <td style={{ ...styles.td, fontSize: '13px' }}>{new Date(order.created_at).toLocaleString()}</td>
                                             <td style={styles.td}>
                                                 <div style={styles.actionButtons}>

@@ -48,6 +48,49 @@ export const RiskBadge = ({ order, showPassed = false }) => {
     return null;
 };
 
+// Short "what to check" labels, one per flag code (full sentence stays in the tooltip / order detail)
+const SHORT_LABEL = {
+    pincode_invalid: 'Pincode invalid',
+    state_pincode_mismatch: 'State ≠ pincode',
+    city_state_mismatch: 'City is another state',
+    city_pincode_mismatch: 'City ≠ pincode',
+    state_invalid: 'State invalid',
+    city_missing: 'City missing',
+    phone_invalid: 'Phone invalid',
+    name_junk: 'Name looks fake',
+    address_incomplete: 'Address incomplete',
+    outside_delivery_zone: 'Outside delivery zone',
+};
+
+// The "Check" column / card line: tells the tenant at a glance whether to look at an order and what to look at.
+export const RiskCheckCell = ({ order, inline = false }) => {
+    if (!order) return null;
+    if (order.risk_status === 'flagged') {
+        const flags = riskFlagsOf(order);
+        const high = flags.some((f) => f.severity === 'High');
+        const shown = flags.slice(0, 3);
+        const more = flags.length - shown.length;
+        const tip = flags.map((f) => `${f.severity}: ${f.message}`).join('\n');
+        const chip = (f, i) => (
+            <span key={i} style={{
+                display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 8, whiteSpace: 'nowrap',
+                background: f.severity === 'High' ? '#ffdad6' : '#fff3e0', color: f.severity === 'High' ? '#ba1a1a' : '#e65100',
+            }}>{SHORT_LABEL[f.code] || f.message}</span>
+        );
+        return (
+            <div title={tip} style={{ display: 'flex', flexDirection: inline ? 'row' : 'column', flexWrap: 'wrap', alignItems: inline ? 'center' : 'flex-start', gap: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: high ? '#ba1a1a' : '#e65100' }}>⚠ Check</span>
+                {shown.map(chip)}
+                {more > 0 && <span style={{ fontSize: 11, color: '#6b7a70' }}>+{more} more</span>}
+            </div>
+        );
+    }
+    if (order.risk_status === 'passed') {
+        return <span style={{ fontSize: 12, fontWeight: 600, color: '#2e7d32', whiteSpace: 'nowrap' }}>✓ No check needed</span>;
+    }
+    return <span title="Not checked: dine-in or pickup order, or placed before this feature" style={{ fontSize: 12, color: '#8e9eab' }}>—</span>;
+};
+
 export const RiskPanel = ({ order, cardStyle, titleStyle }) => {
     if (!order || order.risk_status !== 'flagged') return null;
     const flags = riskFlagsOf(order);
