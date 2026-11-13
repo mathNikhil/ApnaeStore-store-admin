@@ -59,7 +59,9 @@ const SHORT_LABEL = {
     city_missing: 'City missing',
     phone_invalid: 'Phone invalid',
     name_junk: 'Name looks fake',
+    name_too_short: 'Name too short',
     address_incomplete: 'Address incomplete',
+    address_too_short: 'Address too short',
     outside_delivery_zone: 'Outside delivery zone',
 };
 
